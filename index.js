@@ -1,3 +1,7 @@
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
 const {
   Client,
   GatewayIntentBits,
@@ -247,4 +251,21 @@ async function rotateChannel() {
   }
 }
 
+// Simple health check endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    bot: 'Running', 
+    service: 'Discord Channel Rotator Bot',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Start the web server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Health check server running on port ${PORT}`);
+});
+
+// Start Discord bot
 client.login(process.env.BOT_TOKEN);
