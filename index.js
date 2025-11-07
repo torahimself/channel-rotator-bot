@@ -213,16 +213,15 @@ async function rotateChannel() {
     console.log(`📋 Creating new channel: ${config.targetChannelName}`);
 
     // Create channel first without position
-    const newChannel = await guild.channels.create({
-      name: config.targetChannelName,
-      type: templateChannel.type,
-      parent: config.categoryId,
-      topic: templateChannel.topic,
-      nsfw: templateChannel.nsfw,
-      permissionOverwrites: templateChannel.permissionOverwrites.cache,
-      rateLimitPerUser: templateChannel.rateLimitPerUser,
-    });
-
+const newChannel = await guild.channels.create({
+  name: config.targetChannelName,
+  type: templateChannel.type,
+  parent: config.categoryId,
+  topic: "شات مخصص للرولبلاي - يرجى مراجعة القوانين والالتزام فيها", // Your custom topic
+  nsfw: templateChannel.nsfw,
+  permissionOverwrites: templateChannel.permissionOverwrites.cache,
+  rateLimitPerUser: templateChannel.rateLimitPerUser,
+});
     console.log(
       `✅ New channel created: ${newChannel.id} at initial position ${newChannel.position}`,
     );
