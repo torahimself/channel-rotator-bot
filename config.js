@@ -31,7 +31,7 @@ module.exports = {
     ],
     
     defaultSettings: {
-      name: "{username}'s Room", // CHANGED: Removed Arabic
+      name: "{username}'s Room",
       limit: 0,
       privacy: 'unlocked-seen',
       region: 'automatic'
