@@ -6,6 +6,9 @@ class VoiceManager {
     this.tempChannels = new Map();
     this.client = null;
     this.cleanupIntervals = new Map();
+    this.userChannelNames = new Map(); // Store user's preferred channel names
+    this.userTrustedLists = new Map(); // Store user's trusted users
+    this.userBlockedLists = new Map(); // Store user's blocked users
   }
 
   setClient(client) {
@@ -15,7 +18,13 @@ class VoiceManager {
   async createTempChannel(member, parentChannel) {
     try {
       const guild = member.guild;
-      const channelName = config.voice.defaultSettings.name.replace('{username}', member.displayName);
+      
+      // Get user's preferred settings
+      const preferredName = this.userChannelNames.get(member.id) || `${member.displayName}'s Room`;
+      const trustedUsers = this.userTrustedLists.get(member.id) || [];
+      const blockedUsers = this.userBlockedLists.get(member.id) || [];
+      
+      const channelName = preferredName;
       
       const tempChannel = await guild.channels.create({
         name: channelName,
@@ -27,8 +36,8 @@ class VoiceManager {
 
       this.tempChannels.set(tempChannel.id, {
         ownerId: member.id,
-        trustedUsers: [],
-        blockedUsers: [],
+        trustedUsers: [...trustedUsers], // Copy the trusted users
+        blockedUsers: [...blockedUsers], // Copy the blocked users
         settings: {
           name: channelName,
           limit: config.voice.defaultSettings.limit,
@@ -38,6 +47,30 @@ class VoiceManager {
         guildId: guild.id,
         panelMessageId: null
       });
+
+      // Apply trusted users permissions
+      for (const userId of trustedUsers) {
+        try {
+          await tempChannel.permissionOverwrites.edit(userId, {
+            ViewChannel: true,
+            Connect: true
+          });
+        } catch (error) {
+          console.log(`Error applying trusted permissions for ${userId}:`, error.message);
+        }
+      }
+
+      // Apply blocked users permissions
+      for (const userId of blockedUsers) {
+        try {
+          await tempChannel.permissionOverwrites.edit(userId, {
+            ViewChannel: false,
+            Connect: false
+          });
+        } catch (error) {
+          console.log(`Error applying blocked permissions for ${userId}:`, error.message);
+        }
+      }
 
       // Setup auto-cleanup
       this.setupAutoCleanup(tempChannel.id);
@@ -80,7 +113,7 @@ class VoiceManager {
       },
       {
         id: owner.id,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers]
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] // REMOVED ManageChannels and MoveMembers
       },
       {
         id: config.voice.jailRoleId,
@@ -100,6 +133,10 @@ class VoiceManager {
       if (!channelData) return false;
 
       channelData.settings.name = newName;
+      
+      // Store the user's preferred name for future channels
+      this.userChannelNames.set(channelData.ownerId, newName);
+      
       const channel = await this.getChannel(channelId);
       if (channel) {
         await channel.setName(newName);
@@ -180,6 +217,14 @@ class VoiceManager {
 
       if (!channelData.trustedUsers.includes(userId)) {
         channelData.trustedUsers.push(userId);
+        
+        // Add to user's permanent trusted list
+        const userTrustedList = this.userTrustedLists.get(channelData.ownerId) || [];
+        if (!userTrustedList.includes(userId)) {
+          userTrustedList.push(userId);
+          this.userTrustedLists.set(channelData.ownerId, userTrustedList);
+        }
+        
         const channel = await this.getChannel(channelId);
         if (channel) {
           await channel.permissionOverwrites.edit(userId, {
@@ -201,6 +246,11 @@ class VoiceManager {
       if (!channelData) return false;
 
       channelData.trustedUsers = channelData.trustedUsers.filter(id => id !== userId);
+      
+      // Remove from user's permanent trusted list
+      const userTrustedList = this.userTrustedLists.get(channelData.ownerId) || [];
+      this.userTrustedLists.set(channelData.ownerId, userTrustedList.filter(id => id !== userId));
+      
       const channel = await this.getChannel(channelId);
       if (channel && userId !== channelData.ownerId) {
         await channel.permissionOverwrites.delete(userId);
@@ -219,6 +269,14 @@ class VoiceManager {
 
       if (!channelData.blockedUsers.includes(userId)) {
         channelData.blockedUsers.push(userId);
+        
+        // Add to user's permanent blocked list
+        const userBlockedList = this.userBlockedLists.get(channelData.ownerId) || [];
+        if (!userBlockedList.includes(userId)) {
+          userBlockedList.push(userId);
+          this.userBlockedLists.set(channelData.ownerId, userBlockedList);
+        }
+        
         const channel = await this.getChannel(channelId);
         if (channel) {
           await channel.permissionOverwrites.edit(userId, {
@@ -240,6 +298,11 @@ class VoiceManager {
       if (!channelData) return false;
 
       channelData.blockedUsers = channelData.blockedUsers.filter(id => id !== userId);
+      
+      // Remove from user's permanent blocked list
+      const userBlockedList = this.userBlockedLists.get(channelData.ownerId) || [];
+      this.userBlockedLists.set(channelData.ownerId, userBlockedList.filter(id => id !== userId));
+      
       const channel = await this.getChannel(channelId);
       if (channel) {
         await channel.permissionOverwrites.delete(userId);
@@ -297,18 +360,13 @@ class VoiceManager {
       const currentOwnerInChannel = channel.members.has(channelData.ownerId);
       if (currentOwnerInChannel) return false;
 
-      await channel.permissionOverwrites.edit(channelData.ownerId, {
-        ManageChannels: null,
-        MoveMembers: null
-      });
-
+      // Transfer ownership data
       channelData.ownerId = newOwnerId;
-      await channel.permissionOverwrites.edit(newOwnerId, {
-        ViewChannel: true,
-        Connect: true,
-        ManageChannels: true,
-        MoveMembers: true
-      });
+      
+      // Transfer memory settings to new owner
+      this.userChannelNames.set(newOwnerId, this.userChannelNames.get(channelData.ownerId) || `${channel.name}`);
+      this.userTrustedLists.set(newOwnerId, [...(this.userTrustedLists.get(channelData.ownerId) || [])]);
+      this.userBlockedLists.set(newOwnerId, [...(this.userBlockedLists.get(channelData.ownerId) || [])]);
 
       return true;
     } catch (error) {
@@ -325,18 +383,13 @@ class VoiceManager {
       const channel = await this.getChannel(channelId);
       if (!channel) return false;
 
-      await channel.permissionOverwrites.edit(currentOwnerId, {
-        ManageChannels: null,
-        MoveMembers: null
-      });
-
+      // Transfer ownership data
       channelData.ownerId = newOwnerId;
-      await channel.permissionOverwrites.edit(newOwnerId, {
-        ViewChannel: true,
-        Connect: true,
-        ManageChannels: true,
-        MoveMembers: true
-      });
+      
+      // Transfer memory settings to new owner
+      this.userChannelNames.set(newOwnerId, this.userChannelNames.get(currentOwnerId) || `${channel.name}`);
+      this.userTrustedLists.set(newOwnerId, [...(this.userTrustedLists.get(currentOwnerId) || [])]);
+      this.userBlockedLists.set(newOwnerId, [...(this.userBlockedLists.get(currentOwnerId) || [])]);
 
       return true;
     } catch (error) {
@@ -416,6 +469,15 @@ class VoiceManager {
       }
     }
     return null;
+  }
+
+  // Get user's memory data (for debugging)
+  getUserMemory(userId) {
+    return {
+      channelName: this.userChannelNames.get(userId),
+      trustedUsers: this.userTrustedLists.get(userId) || [],
+      blockedUsers: this.userBlockedLists.get(userId) || []
+    };
   }
 }
 
