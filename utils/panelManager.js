@@ -5,22 +5,29 @@ const voiceManager = require('./voiceManager');
 class PanelManager {
   constructor() {
     this.client = null;
+    this.mainPanelMessageId = null;
   }
 
   setClient(client) {
     this.client = client;
   }
 
-  async createControlPanel(channelId, ownerId) {
-    const channelData = voiceManager.getChannelData(channelId);
-    if (!channelData) return null;
-
+  // Create the single main control panel
+  async createMainPanel() {
     const panelChannel = await this.client.channels.fetch(config.voice.controlPanelChannelId);
     if (!panelChannel) return null;
 
+    // Clear existing messages in the panel channel
+    try {
+      const messages = await panelChannel.messages.fetch({ limit: 10 });
+      await panelChannel.bulkDelete(messages);
+    } catch (error) {
+      console.log('Could not clear panel channel:', error.message);
+    }
+
     const embed = {
-      title: `🎛️ لوحة تحكم غرفة الصوت`,
-      description: `**الغرفة:** <#${channelId}>\n**المالك:** <@${ownerId}>`,
+      title: `🎛️ لوحة تحكم غرف الصوت الرئيسية`,
+      description: `**لوحة التحكم المركزية**\nاستخدم الأزرار أدناه للتحكم في غرفة الصوت الخاصة بك\n\n**ملاحظة:** يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت لاستخدام هذه اللوحة`,
       fields: [
         {
           name: '⚙️ الإعدادات الأساسية',
@@ -38,27 +45,27 @@ class PanelManager {
           inline: false
         }
       ],
-      color: 0x5865F2, // Discord blue
+      color: 0x5865F2,
       timestamp: new Date().toISOString(),
-      footer: { text: 'تحكم في غرفة الصوت الخاصة بك' }
+      footer: { text: 'لوحة التحكم المركزية - جميع المستخدمين' }
     };
 
     // Row 1: Basic Settings (Blue)
     const basicControls = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`voice_name_${channelId}`)
+        .setCustomId('voice_name_main')
         .setLabel('✏️ تغيير الاسم')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId(`voice_limit_${channelId}`)
+        .setCustomId('voice_limit_main')
         .setLabel('👥 تحديد العدد')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId(`voice_privacy_${channelId}`)
+        .setCustomId('voice_privacy_main')
         .setLabel('🔒 إعدادات الخصوصية')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId(`voice_region_${channelId}`)
+        .setCustomId('voice_region_main')
         .setLabel('🌍 تغيير المنطقة')
         .setStyle(ButtonStyle.Primary)
     );
@@ -66,15 +73,15 @@ class PanelManager {
     // Row 2: User Management - Positive actions (Green)
     const userManagementPositive = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`voice_trust_${channelId}`)
+        .setCustomId('voice_trust_main')
         .setLabel('✅ إضافة ثقة')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId(`voice_untrust_${channelId}`)
+        .setCustomId('voice_untrust_main')
         .setLabel('❌ إزالة ثقة')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
-        .setCustomId(`voice_unblock_${channelId}`)
+        .setCustomId('voice_unblock_main')
         .setLabel('🔓 إلغاء الحظر')
         .setStyle(ButtonStyle.Success)
     );
@@ -82,11 +89,11 @@ class PanelManager {
     // Row 3: User Management - Negative actions (Red)
     const userManagementNegative = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`voice_kick_${channelId}`)
+        .setCustomId('voice_kick_main')
         .setLabel('👢 طرد مستخدم')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
-        .setCustomId(`voice_block_${channelId}`)
+        .setCustomId('voice_block_main')
         .setLabel('🚫 حظر مستخدم')
         .setStyle(ButtonStyle.Danger)
     );
@@ -94,15 +101,15 @@ class PanelManager {
     // Row 4: Quick Actions (Secondary/Grey)
     const quickActions = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`voice_claim_${channelId}`)
+        .setCustomId('voice_claim_main')
         .setLabel('🎯 المطالبة بالملكية')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId(`voice_transfer_${channelId}`)
+        .setCustomId('voice_transfer_main')
         .setLabel('🔄 نقل الملكية')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId(`voice_delete_${channelId}`)
+        .setCustomId('voice_delete_main')
         .setLabel('🗑️ حذف الغرفة')
         .setStyle(ButtonStyle.Danger)
     );
@@ -110,6 +117,47 @@ class PanelManager {
     const message = await panelChannel.send({
       embeds: [embed],
       components: [basicControls, userManagementPositive, userManagementNegative, quickActions]
+    });
+
+    this.mainPanelMessageId = message.id;
+    return message.id;
+  }
+
+  // Create per-channel panel (sent to the voice channel)
+  async createChannelPanel(channelId, ownerId) {
+    const channel = await voiceManager.getChannel(channelId);
+    if (!channel) return null;
+
+    const embed = {
+      title: `🎛️ لوحة تحكم غرفتك الصوتية`,
+      description: `**الغرفة:** ${channel.name}\n**المالك:** <@${ownerId}>\n\nاستخدم الأزرار أدناه للتحكم في غرفتك`,
+      color: 0x00ff00,
+      timestamp: new Date().toISOString(),
+      footer: { text: 'لوحة التحكم الخاصة بالغرفة' }
+    };
+
+    const controls = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`voice_name_${channelId}`)
+        .setLabel('✏️ الاسم')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`voice_limit_${channelId}`)
+        .setLabel('👥 العدد')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`voice_privacy_${channelId}`)
+        .setLabel('🔒 الخصوصية')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`voice_delete_${channelId}`)
+        .setLabel('🗑️ حذف')
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    const message = await channel.send({
+      embeds: [embed],
+      components: [controls]
     });
 
     return message.id;
