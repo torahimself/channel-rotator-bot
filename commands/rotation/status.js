@@ -1,24 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const config = require('../../config.js');
 
-// Calculate 6 AM Riyadh time (3 AM UTC) for next rotation
-function getNextRotationTime() {
-  const now = new Date();
-  const next = new Date();
-  
-  // Set to 3 AM UTC (6 AM Riyadh)
-  next.setUTCHours(3, 0, 0, 0);
-  
-  // If it's already past 3 AM UTC today, schedule for tomorrow
-  if (now.getTime() > next.getTime()) {
-    next.setUTCDate(next.getUTCDate() + 1);
-  }
-  
-  return next;
-}
-
-// Global variables to track rotation times
-let nextRotationTime = getNextRotationTime();
+let nextRotationTime = new Date(Date.now() + config.rotation.rotationInterval);
 let lastRotationTime = null;
 
 module.exports = {
@@ -37,7 +20,6 @@ module.exports = {
       fields: [
         { name: "Status", value: "Enabled ✅", inline: true },
         { name: "Channel Name", value: config.rotation.targetChannelName, inline: true },
-        { name: "Channel Type", value: "text", inline: true },
         {
           name: "Next Rotation",
           value: `<t:${Math.floor(nextRotationTime.getTime() / 1000)}:F>`,
@@ -45,25 +27,7 @@ module.exports = {
         },
         {
           name: "Last Rotation",
-          value: lastRotationTime 
-            ? `<t:${Math.floor(lastRotationTime.getTime() / 1000)}:R>`
-            : "Never",
-          inline: true,
-        },
-        { name: "Category", value: `<#${config.rotation.categoryId}>`, inline: true },
-        {
-          name: "Template",
-          value: `<#${config.rotation.templateChannelId}>`,
-          inline: true,
-        },
-        {
-          name: "Active Channels",
-          value: currentChannel ? "1 ✅" : "0 ❌",
-          inline: true,
-        },
-        {
-          name: "Current Position",
-          value: currentChannel ? `Position ${currentChannel.position}` : "N/A",
+          value: lastRotationTime ? `<t:${Math.floor(lastRotationTime.getTime() / 1000)}:R>` : "Never",
           inline: true,
         },
       ],
@@ -74,9 +38,3 @@ module.exports = {
     await interaction.reply({ embeds: [statusEmbed] });
   },
 };
-
-// Export these so the rotation system can update them
-module.exports.getNextRotationTime = getNextRotationTime;
-module.exports.setNextRotationTime = (time) => { nextRotationTime = time; };
-module.exports.setLastRotationTime = (time) => { lastRotationTime = time; };
-module.exports.getLastRotationTime = () => lastRotationTime;
