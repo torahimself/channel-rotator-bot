@@ -12,7 +12,11 @@ module.exports = {
         const tempChannel = await voiceManager.createTempChannel(newState.member, createChannel);
         
         if (tempChannel) {
-          await panelManager.createControlPanel(tempChannel.id, newState.member.id);
+          // Create panel in the voice channel itself
+          const panelMessageId = await panelManager.createChannelPanel(tempChannel.id, newState.member.id);
+          if (panelMessageId) {
+            voiceManager.setPanelMessageId(tempChannel.id, panelMessageId);
+          }
           console.log(`✅ Created temp voice channel for ${newState.member.displayName}`);
         }
       } catch (error) {
@@ -20,20 +24,12 @@ module.exports = {
       }
     }
 
-    // User left a temp channel - check if empty and cleanup
+    // User left a temp channel - auto cleanup is now handled by voiceManager
     if (oldState.channelId && oldState.channelId !== config.voice.createChannelId) {
       const channelData = voiceManager.getChannelData(oldState.channelId);
       if (channelData) {
-        const channel = oldState.channel;
-        if (channel && channel.members.size === 0 && config.voice.autoCleanup) {
-          setTimeout(async () => {
-            const updatedChannel = await voiceManager.getChannel(oldState.channelId);
-            if (updatedChannel && updatedChannel.members.size === 0) {
-              await voiceManager.deleteChannel(oldState.channelId, channelData.ownerId);
-              console.log(`🧹 Cleaned up empty temp channel: ${oldState.channelId}`);
-            }
-          }, 30000); // Wait 30 seconds before cleanup
-        }
+        // Auto-cleanup is now handled by the interval in voiceManager
+        console.log(`User left channel ${oldState.channelId}, auto-cleanup will handle if empty`);
       }
     }
   },
