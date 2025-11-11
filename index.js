@@ -8,12 +8,13 @@ const eventHandler = require('./handlers/eventHandler');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Discord client
+// Discord client with required intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.MessageContent
   ],
 });
 
@@ -23,7 +24,11 @@ app.get('/', (req, res) => {
     status: 'OK', 
     bot: client.readyAt ? 'Connected' : 'Connecting',
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    features: {
+      rotation: 'active',
+      voice: 'active'
+    }
   });
 });
 
@@ -38,5 +43,5 @@ eventHandler.loadEvents(client);
 // Start Discord bot
 client.login(config.botToken);
 
-// Export for testing if needed
+// Export for testing
 module.exports = { client, app };
