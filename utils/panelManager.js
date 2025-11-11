@@ -19,90 +19,97 @@ class PanelManager {
     if (!panelChannel) return null;
 
     const embed = {
-      title: `🎛️ Voice Channel Control Panel`,
-      description: `**Channel:** <#${channelId}>\n**Owner:** <@${ownerId}>`,
+      title: `🎛️ لوحة تحكم غرفة الصوت`,
+      description: `**الغرفة:** <#${channelId}>\n**المالك:** <@${ownerId}>`,
       fields: [
         {
-          name: '🔧 Basic Controls',
-          value: 'Change name, limit, privacy, or region',
+          name: '⚙️ الإعدادات الأساسية',
+          value: 'تغيير الاسم، الحد، الخصوصية، أو المنطقة',
           inline: false
         },
         {
-          name: '👥 User Management',
-          value: 'Trust, untrust, kick, block, or unblock users',
+          name: '👥 إدارة المستخدمين',
+          value: 'إضافة ثقة، إزالة ثقة، طرد، حظر، أو إلغاء حظر المستخدمين',
           inline: false
         },
         {
-          name: '⚡ Quick Actions',
-          value: 'Claim, transfer, or delete channel',
+          name: '🚀 الإجراءات السريعة',
+          value: 'المطالبة، نقل الملكية، أو حذف الغرفة',
           inline: false
         }
       ],
-      color: 0x00ff00,
+      color: 0x5865F2, // Discord blue
       timestamp: new Date().toISOString(),
-      footer: { text: 'Control your voice channel' }
+      footer: { text: 'تحكم في غرفة الصوت الخاصة بك' }
     };
 
+    // Row 1: Basic Settings (Blue)
     const basicControls = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`voice_name_${channelId}`)
-        .setLabel('✏️ Name')
+        .setLabel('✏️ تغيير الاسم')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`voice_limit_${channelId}`)
-        .setLabel('👥 Limit')
+        .setLabel('👥 تحديد العدد')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`voice_privacy_${channelId}`)
-        .setLabel('🔒 Privacy')
+        .setLabel('🔒 إعدادات الخصوصية')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`voice_region_${channelId}`)
-        .setLabel('🌍 Region')
+        .setLabel('🌍 تغيير المنطقة')
         .setStyle(ButtonStyle.Primary)
     );
 
-    const userManagement = new ActionRowBuilder().addComponents(
+    // Row 2: User Management - Positive actions (Green)
+    const userManagementPositive = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`voice_trust_${channelId}`)
-        .setLabel('✅ Trust')
+        .setLabel('✅ إضافة ثقة')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`voice_untrust_${channelId}`)
-        .setLabel('❌ Untrust')
+        .setLabel('❌ إزالة ثقة')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
+        .setCustomId(`voice_unblock_${channelId}`)
+        .setLabel('🔓 إلغاء الحظر')
+        .setStyle(ButtonStyle.Success)
+    );
+
+    // Row 3: User Management - Negative actions (Red)
+    const userManagementNegative = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
         .setCustomId(`voice_kick_${channelId}`)
-        .setLabel('👢 Kick')
+        .setLabel('👢 طرد مستخدم')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
         .setCustomId(`voice_block_${channelId}`)
-        .setLabel('🚫 Block')
+        .setLabel('🚫 حظر مستخدم')
         .setStyle(ButtonStyle.Danger)
     );
 
+    // Row 4: Quick Actions (Secondary/Grey)
     const quickActions = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`voice_claim_${channelId}`)
-        .setLabel('🎯 Claim')
+        .setLabel('🎯 المطالبة بالملكية')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`voice_transfer_${channelId}`)
-        .setLabel('🔄 Transfer')
+        .setLabel('🔄 نقل الملكية')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId(`voice_unblock_${channelId}`)
-        .setLabel('✅ Unblock')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
         .setCustomId(`voice_delete_${channelId}`)
-        .setLabel('🗑️ Delete')
+        .setLabel('🗑️ حذف الغرفة')
         .setStyle(ButtonStyle.Danger)
     );
 
     const message = await panelChannel.send({
       embeds: [embed],
-      components: [basicControls, userManagement, quickActions]
+      components: [basicControls, userManagementPositive, userManagementNegative, quickActions]
     });
 
     return message.id;
@@ -110,18 +117,18 @@ class PanelManager {
 
   createNameModal(channelId) {
     return {
-      title: 'Change Channel Name',
+      title: 'تغيير اسم الغرفة',
       custom_id: `modal_name_${channelId}`,
       components: [{
         type: 1,
         components: [{
           type: 4,
           custom_id: 'name_input',
-          label: 'New Channel Name',
+          label: 'الاسم الجديد للغرفة',
           style: 1,
           min_length: 1,
           max_length: 100,
-          placeholder: 'Enter new channel name...',
+          placeholder: 'أدخل الاسم الجديد...',
           required: true
         }]
       }]
@@ -130,18 +137,18 @@ class PanelManager {
 
   createLimitModal(channelId) {
     return {
-      title: 'Change User Limit',
+      title: 'تغيير الحد الأقصى للمستخدمين',
       custom_id: `modal_limit_${channelId}`,
       components: [{
         type: 1,
         components: [{
           type: 4,
           custom_id: 'limit_input',
-          label: 'User Limit (0 for no limit)',
+          label: 'الحد الأقصى للمستخدمين (0 يعني لا يوجد حد)',
           style: 1,
           min_length: 1,
           max_length: 2,
-          placeholder: 'Enter number (0-99)...',
+          placeholder: 'أدخل رقم بين 0 و 99...',
           required: true
         }]
       }]
@@ -152,21 +159,21 @@ class PanelManager {
     return new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(`menu_privacy_${channelId}`)
-        .setPlaceholder('Select privacy setting...')
+        .setPlaceholder('اختر إعدادات الخصوصية...')
         .addOptions(
           {
-            label: '🔒 Locked',
-            description: 'No one can join',
+            label: '🔒 مقفل',
+            description: 'لا أحد يستطيع الدخول',
             value: 'locked'
           },
           {
-            label: '👻 Unlocked Unseen',
-            description: 'Can join but cannot see',
+            label: '👻 مفتوح غير مرئي',
+            description: 'يمكن الدخول لكن لا يمكن الرؤية',
             value: 'unlocked-unseen'
           },
           {
-            label: '👀 Unlocked Seen',
-            description: 'Can see and join',
+            label: '👀 مفتوح مرئي',
+            description: 'يمكن الرؤية والدخول',
             value: 'unlocked-seen'
           }
         )
@@ -175,43 +182,72 @@ class PanelManager {
 
   createRegionMenu(channelId) {
     const options = config.voice.regions.map(region => ({
-      label: region.charAt(0).toUpperCase() + region.slice(1),
-      description: `Set region to ${region}`,
+      label: this.formatRegionName(region),
+      description: `تعيين المنطقة إلى ${region}`,
       value: region
     }));
 
     options.unshift({
-      label: 'Automatic',
-      description: 'Use automatic region selection',
+      label: 'تلقائي',
+      description: 'استخدام اختيار المنطقة التلقائي',
       value: 'automatic'
     });
 
     return new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(`menu_region_${channelId}`)
-        .setPlaceholder('Select voice region...')
+        .setPlaceholder('اختر منطقة الصوت...')
         .addOptions(options)
     );
   }
 
   createUserInputModal(channelId, action) {
+    const actionLabels = {
+      'trust': 'إضافة ثقة',
+      'untrust': 'إزالة ثقة', 
+      'kick': 'طرد',
+      'block': 'حظر',
+      'unblock': 'إلغاء الحظر',
+      'transfer': 'نقل الملكية'
+    };
+
     return {
-      title: `${action.charAt(0).toUpperCase() + action.slice(1)} User`,
+      title: actionLabels[action] || 'إدارة المستخدم',
       custom_id: `modal_${action}_${channelId}`,
       components: [{
         type: 1,
         components: [{
           type: 4,
           custom_id: 'user_input',
-          label: 'User ID or Mention',
+          label: 'معرف المستخدم أو المنشن',
           style: 1,
           min_length: 1,
           max_length: 100,
-          placeholder: 'Enter user ID or mention...',
+          placeholder: 'أدخل معرف المستخدم أو المنشن...',
           required: true
         }]
       }]
     };
+  }
+
+  formatRegionName(region) {
+    const regionNames = {
+      'brazil': 'البرازيل',
+      'hongkong': 'هونغ كونغ',
+      'india': 'الهند',
+      'japan': 'اليابان',
+      'rotterdam': 'روتردام',
+      'russia': 'روسيا',
+      'singapore': 'سنغافورة',
+      'southafrica': 'جنوب أفريقيا',
+      'sydney': 'سيدني',
+      'us-central': 'الولايات المتحدة الوسطى',
+      'us-east': 'الولايات المتحدة الشرقية', 
+      'us-south': 'الولايات المتحدة الجنوبية',
+      'us-west': 'الولايات المتحدة الغربية'
+    };
+
+    return regionNames[region] || region;
   }
 }
 
