@@ -29,9 +29,26 @@ module.exports = {
 };
 
 async function handleButtonInteraction(interaction) {
-  const [action, channelId] = interaction.customId.split('_').slice(1);
+  const [action, channelIdentifier] = interaction.customId.split('_').slice(1);
   
-  // Fix: Check if user is in the voice channel AND is the owner
+  let channelId;
+  
+  // Determine which channel to target
+  if (channelIdentifier === 'main') {
+    // Use main panel - find user's current temp channel
+    channelId = voiceManager.getUserCurrentChannel(interaction.user.id);
+    if (!channelId) {
+      await interaction.reply({ 
+        content: '❌ يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت لاستخدام هذه اللوحة!', 
+        ephemeral: true 
+      });
+      return;
+    }
+  } else {
+    // Use specific channel ID from per-channel panel
+    channelId = channelIdentifier;
+  }
+
   const channelData = voiceManager.getChannelData(channelId);
   if (!channelData) {
     await interaction.reply({ content: '❌ لم تعد هذه الغرفة موجودة!', ephemeral: true });
@@ -41,9 +58,19 @@ async function handleButtonInteraction(interaction) {
   const userInChannel = interaction.member.voice.channelId === channelId;
   const isOwner = voiceManager.isOwner(channelId, interaction.user.id);
   
-  if (!userInChannel || !isOwner) {
-    await interaction.reply({ content: '❌ يجب أن تكون المالك وتكون في الغرفة الصوتية!', ephemeral: true });
-    return;
+  // Special case for claim - user doesn't need to be owner but must be in channel
+  if (action === 'claim') {
+    if (!userInChannel) {
+      await interaction.reply({ content: '❌ يجب أن تكون في الغرفة الصوتية للمطالبة بها!', ephemeral: true });
+      return;
+    }
+    // Allow claim even if not current owner
+  } else {
+    // For all other actions, user must be owner and in channel
+    if (!userInChannel || !isOwner) {
+      await interaction.reply({ content: '❌ يجب أن تكون المالك وتكون في الغرفة الصوتية!', ephemeral: true });
+      return;
+    }
   }
 
   switch (action) {
@@ -100,10 +127,24 @@ async function handleButtonInteraction(interaction) {
 }
 
 async function handleSelectMenuInteraction(interaction) {
-  const [action, channelId] = interaction.customId.split('_').slice(1);
+  const [action, channelIdentifier] = interaction.customId.split('_').slice(1);
   const value = interaction.values[0];
 
-  // Fix: Check if user is in the voice channel AND is the owner
+  let channelId;
+  
+  if (channelIdentifier === 'main') {
+    channelId = voiceManager.getUserCurrentChannel(interaction.user.id);
+    if (!channelId) {
+      await interaction.reply({ 
+        content: '❌ يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت!', 
+        ephemeral: true 
+      });
+      return;
+    }
+  } else {
+    channelId = channelIdentifier;
+  }
+
   const channelData = voiceManager.getChannelData(channelId);
   if (!channelData) {
     await interaction.reply({ content: '❌ لم تعد هذه الغرفة موجودة!', ephemeral: true });
@@ -138,9 +179,23 @@ async function handleSelectMenuInteraction(interaction) {
 }
 
 async function handleModalInteraction(interaction) {
-  const [action, channelId] = interaction.customId.split('_').slice(1);
+  const [action, channelIdentifier] = interaction.customId.split('_').slice(1);
 
-  // Fix: Check if user is in the voice channel AND is the owner
+  let channelId;
+  
+  if (channelIdentifier === 'main') {
+    channelId = voiceManager.getUserCurrentChannel(interaction.user.id);
+    if (!channelId) {
+      await interaction.reply({ 
+        content: '❌ يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت!', 
+        ephemeral: true 
+      });
+      return;
+    }
+  } else {
+    channelId = channelIdentifier;
+  }
+
   const channelData = voiceManager.getChannelData(channelId);
   if (!channelData) {
     await interaction.reply({ content: '❌ لم تعد هذه الغرفة موجودة!', ephemeral: true });
@@ -214,51 +269,4 @@ async function handleModalInteraction(interaction) {
       if (!userToBlock) return;
       const blockResult = await voiceManager.blockUser(channelId, userToBlock);
       await interaction.reply({ 
-        content: blockResult ? `✅ تم حظر المستخدم <@${userToBlock}>` : '❌ فشل في حظر المستخدم.',
-        ephemeral: true 
-      });
-      break;
-
-    case 'unblock':
-      const userToUnblock = await extractUserId(interaction, 'user_input');
-      if (!userToUnblock) return;
-      const unblockResult = await voiceManager.unblockUser(channelId, userToUnblock);
-      await interaction.reply({ 
-        content: unblockResult ? `✅ تم إلغاء حظر المستخدم <@${userToUnblock}>` : '❌ فشل في إلغاء الحظر.',
-        ephemeral: true 
-      });
-      break;
-
-    case 'transfer':
-      const newOwnerId = await extractUserId(interaction, 'user_input');
-      if (!newOwnerId) return;
-      const transferResult = await voiceManager.transferOwnership(channelId, interaction.user.id, newOwnerId);
-      await interaction.reply({ 
-        content: transferResult ? `✅ تم نقل الملكية إلى <@${newOwnerId}>!` : '❌ فشل في نقل الملكية.',
-        ephemeral: true 
-      });
-      break;
-  }
-}
-
-async function extractUserId(interaction, fieldName) {
-  const input = interaction.fields.getTextInputValue(fieldName);
-  
-  // Check if it's a mention
-  const mentionMatch = input.match(/<@!?(\d+)>/);
-  if (mentionMatch) return mentionMatch[1];
-  
-  // Check if it's a user ID
-  if (/^\d+$/.test(input)) {
-    try {
-      const user = await interaction.client.users.fetch(input);
-      return user.id;
-    } catch {
-      await interaction.reply({ content: '❌ المستخدم غير موجود!', ephemeral: true });
-      return null;
-    }
-  }
-  
-  await interaction.reply({ content: '❌ الرجاء تقديم منشن أو معرف مستخدم صحيح.', ephemeral: true });
-  return null;
-}
+        content: blockResult ? `✅ تم ح
