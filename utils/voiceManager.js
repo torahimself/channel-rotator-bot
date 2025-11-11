@@ -41,16 +41,22 @@ class VoiceManager {
   }
 
   getDefaultPermissions(owner, guild) {
-    return [
+    const permissions = [
       {
-        id: guild.id,
-        deny: ['ViewChannel', 'Connect']
+        id: guild.id, // @everyone - ALLOW viewing and connecting by default
+        allow: ['ViewChannel', 'Connect']
       },
       {
-        id: owner.id,
+        id: owner.id, // Owner - Full permissions
         allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers']
+      },
+      {
+        id: config.voice.jailRoleId, // Jail role - ALWAYS DENY
+        deny: ['ViewChannel', 'Connect']
       }
     ];
+
+    return permissions;
   }
 
   async getChannel(channelId) {
@@ -105,15 +111,22 @@ class VoiceManager {
         break;
       case 'unlocked-unseen':
         everyonePerms.ViewChannel = false;
-        everyonePerms.Connect = null;
+        everyonePerms.Connect = true; // Allow connecting even if unseen
         break;
       case 'unlocked-seen':
         everyonePerms.ViewChannel = true;
-        everyonePerms.Connect = null;
+        everyonePerms.Connect = true;
         break;
     }
 
     await channel.permissionOverwrites.edit(channel.guild.id, everyonePerms);
+    
+    // Always ensure jail role is blocked
+    await channel.permissionOverwrites.edit(config.voice.jailRoleId, {
+      ViewChannel: false,
+      Connect: false
+    });
+
     return true;
   }
 
@@ -143,7 +156,10 @@ class VoiceManager {
     
     const channel = await this.getChannel(channelId);
     if (channel) {
-      await channel.permissionOverwrites.delete(userId);
+      // Only remove if not the owner
+      if (userId !== channelData.ownerId) {
+        await channel.permissionOverwrites.delete(userId);
+      }
     }
     return true;
   }
@@ -215,7 +231,7 @@ class VoiceManager {
     const currentOwnerInChannel = channel.members.has(channelData.ownerId);
     if (currentOwnerInChannel) return false;
 
-    // Remove old owner permissions
+    // Remove old owner permissions (keep basic access)
     await channel.permissionOverwrites.edit(channelData.ownerId, {
       ManageChannels: null,
       MoveMembers: null
@@ -241,7 +257,7 @@ class VoiceManager {
     const channel = await this.getChannel(channelId);
     if (!channel) return false;
 
-    // Remove old owner permissions
+    // Remove old owner management permissions (keep basic access)
     await channel.permissionOverwrites.edit(currentOwnerId, {
       ManageChannels: null,
       MoveMembers: null
@@ -264,10 +280,10 @@ class VoiceManager {
     const channelData = this.tempChannels.get(channelId);
     if (!channelData) return false;
 
-    // Only owner or admin can delete
     const channel = await this.getChannel(channelId);
     if (!channel) return false;
 
+    // Only owner or admin can delete
     const requester = channel.guild.members.cache.get(requesterId);
     if (channelData.ownerId !== requesterId && !requester.permissions.has('Administrator')) {
       return false;
