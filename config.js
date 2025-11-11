@@ -19,9 +19,9 @@ module.exports = {
   // Voice System Config
   voice: {
     // REPLACE THESE WITH YOUR ACTUAL CHANNEL IDs:
-    createChannelId: "YOUR_CREATE_VOICE_CHANNEL_ID", // Users join this to create temp voice
-    controlPanelChannelId: "YOUR_CONTROL_PANEL_CHANNEL_ID", // Where control panels appear
-    categoryId: "YOUR_VOICE_CATEGORY_ID", // Where temp voice channels are created
+    createChannelId: "1437800522991009792", // Users join this to create temp voice
+    controlPanelChannelId: "1437799663326593105", // Where control panels appear
+    categoryId: "1368516666241060884", // Where temp voice channels are created
     
     // System Settings
     maxTrustedUsers: 50,
