@@ -21,8 +21,8 @@ const config = {
   targetChannelName: "👠．ᴄʜᴀᴛ・الفساد",
   positionChannels: [
     "1418663574493991144",
-    "1426480048319369327",
     "1357384022388379891",
+    "1437107048348123136"  // CHANGED: Replaced "1426480048319369327" with "1437107048348123136"
   ],
   rotationInterval: 24 * 60 * 60 * 1000,
   status: "Enabled ✅",
@@ -213,15 +213,16 @@ async function rotateChannel() {
     console.log(`📋 Creating new channel: ${config.targetChannelName}`);
 
     // Create channel first without position
-const newChannel = await guild.channels.create({
-  name: config.targetChannelName,
-  type: templateChannel.type,
-  parent: config.categoryId,
-  topic: "شات مخصص للرولبلاي - يرجى مراجعة القوانين والالتزام فيها", // Your custom topic
-  nsfw: templateChannel.nsfw,
-  permissionOverwrites: templateChannel.permissionOverwrites.cache,
-  rateLimitPerUser: templateChannel.rateLimitPerUser,
-});
+    const newChannel = await guild.channels.create({
+      name: config.targetChannelName,
+      type: templateChannel.type,
+      parent: config.categoryId,
+      topic: templateChannel.topic,
+      nsfw: templateChannel.nsfw,
+      permissionOverwrites: templateChannel.permissionOverwrites.cache,
+      rateLimitPerUser: templateChannel.rateLimitPerUser,
+    });
+
     console.log(
       `✅ New channel created: ${newChannel.id} at initial position ${newChannel.position}`,
     );
