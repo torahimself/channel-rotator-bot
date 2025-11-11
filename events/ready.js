@@ -8,22 +8,31 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot logged in as ${client.user.tag}!`);
 
-    // Register slash commands
+    // Register slash commands with error handling
     try {
       const rest = new REST({ version: '10' }).setToken(config.botToken);
       const commands = commandHandler.getCommands();
       
       if (commands.length > 0) {
+        console.log(`🔄 Registering ${commands.length} commands...`);
+        
         await rest.put(
           Routes.applicationGuildCommands(client.user.id, config.rotation.serverId),
           { body: commands }
         );
-        console.log(`✅ Registered ${commands.length} slash commands!`);
+        
+        console.log(`✅ Successfully registered ${commands.length} commands!`);
       } else {
         console.log('ℹ️  No commands to register');
       }
     } catch (error) {
-      console.log('ℹ️  Could not register commands:', error.message);
+      if (error.code === 50001) {
+        console.log('❌ Bot needs "applications.commands" scope invited with bot');
+        console.log('ℹ️  Re-invite bot with this URL:');
+        console.log(`https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`);
+      } else {
+        console.log('❌ Could not register commands:', error.message);
+      }
     }
 
     console.log('🤖 Bot is fully operational!');
