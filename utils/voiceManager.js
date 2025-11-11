@@ -126,7 +126,7 @@ class VoiceManager {
   async updateChannelName(channelId, newName) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       channelData.settings.name = newName;
       this.userChannelNames.set(channelData.ownerId, newName);
@@ -134,40 +134,40 @@ class VoiceManager {
       const channel = await this.getChannel(channelId);
       if (channel) {
         await channel.setName(newName);
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: 'Failed to update channel name' };
     } catch (error) {
       console.error('Error updating channel name:', error);
-      return false;
+      return { success: false, error: 'Failed to update channel name' };
     }
   }
 
   async updateUserLimit(channelId, limit) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       channelData.settings.limit = limit;
       const channel = await this.getChannel(channelId);
       if (channel) {
         await channel.setUserLimit(limit);
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: 'Failed to update user limit' };
     } catch (error) {
       console.error('Error updating user limit:', error);
-      return false;
+      return { success: false, error: 'Failed to update user limit' };
     }
   }
 
   async updatePrivacy(channelId, privacyType) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       const channel = await this.getChannel(channelId);
-      if (!channel) return false;
+      if (!channel) return { success: false, error: 'Channel not found' };
 
       channelData.settings.privacy = privacyType;
 
@@ -197,10 +197,10 @@ class VoiceManager {
         Connect: false
       });
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error updating privacy:', error);
-      return false;
+      return { success: false, error: 'Failed to update privacy' };
     }
   }
 
