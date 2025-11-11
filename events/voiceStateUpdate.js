@@ -1,28 +1,40 @@
 const config = require('../config.js');
+const voiceManager = require('../utils/voiceManager');
+const panelManager = require('../utils/panelManager');
 
 module.exports = {
   name: 'voiceStateUpdate',
   async execute(oldState, newState) {
-    // Temp voice channel system
+    // User joined the create channel
     if (newState.channelId === config.voice.createChannelId) {
-      const guild = newState.guild;
-      const member = newState.member;
-      
-      const tempChannel = await guild.channels.create({
-        name: `🎙️ ${member.displayName}'s Room`,
-        type: 2, // GUILD_VOICE
-        parent: config.voice.categoryId || newState.channel.parentId,
-      });
-
-      await member.voice.setChannel(tempChannel);
+      try {
+        const createChannel = newState.channel;
+        const tempChannel = await voiceManager.createTempChannel(newState.member, createChannel);
+        
+        if (tempChannel) {
+          await panelManager.createControlPanel(tempChannel.id, newState.member.id);
+          console.log(`✅ Created temp voice channel for ${newState.member.displayName}`);
+        }
+      } catch (error) {
+        console.error('❌ Error creating temp voice channel:', error);
+      }
     }
 
-    // Clean up empty temp channels
-    if (oldState.channel && 
-        oldState.channel.name.includes("'s Room") && 
-        oldState.channel.id !== config.voice.createChannelId &&
-        oldState.channel.members.size === 0) {
-      await oldState.channel.delete();
+    // User left a temp channel - check if empty and cleanup
+    if (oldState.channelId && oldState.channelId !== config.voice.createChannelId) {
+      const channelData = voiceManager.getChannelData(oldState.channelId);
+      if (channelData) {
+        const channel = oldState.channel;
+        if (channel && channel.members.size === 0 && config.voice.autoCleanup) {
+          setTimeout(async () => {
+            const updatedChannel = await voiceManager.getChannel(oldState.channelId);
+            if (updatedChannel && updatedChannel.members.size === 0) {
+              await voiceManager.deleteChannel(oldState.channelId, channelData.ownerId);
+              console.log(`🧹 Cleaned up empty temp channel: ${oldState.channelId}`);
+            }
+          }, 30000); // Wait 30 seconds before cleanup
+        }
+      }
     }
   },
 };
