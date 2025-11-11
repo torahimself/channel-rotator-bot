@@ -2,6 +2,8 @@ const { REST, Routes } = require('discord.js');
 const config = require('../config.js');
 const commandHandler = require('../handlers/commandHandler');
 const rotationSystem = require('../utils/rotationSystem');
+const voiceManager = require('../utils/voiceManager');
+const panelManager = require('../utils/panelManager');
 
 module.exports = {
   name: 'ready',
@@ -9,7 +11,11 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot logged in as ${client.user.tag}!`);
 
-    // Register slash commands with error handling
+    // Set client for voice and panel managers
+    voiceManager.setClient(client);
+    panelManager.setClient(client);
+
+    // Register slash commands
     try {
       const rest = new REST({ version: '10' }).setToken(config.botToken);
       const commands = commandHandler.getCommands();
@@ -29,11 +35,17 @@ module.exports = {
     } catch (error) {
       if (error.code === 50001) {
         console.log('❌ Bot needs "applications.commands" scope invited with bot');
-        console.log('ℹ️  Re-invite bot with this URL:');
-        console.log(`https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`);
       } else {
         console.log('❌ Could not register commands:', error.message);
       }
+    }
+
+    // Create the main voice control panel
+    try {
+      await panelManager.createMainPanel();
+      console.log('✅ Main voice control panel created!');
+    } catch (error) {
+      console.log('❌ Could not create main panel:', error.message);
     }
 
     // Start the rotation system
@@ -42,5 +54,6 @@ module.exports = {
 
     console.log('🤖 Bot is fully operational!');
     console.log('🔄 Channel rotation system activated!');
+    console.log('🎤 Temp voice system activated!');
   },
 };
