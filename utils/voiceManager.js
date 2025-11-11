@@ -9,6 +9,7 @@ class VoiceManager {
     this.userChannelNames = new Map();
     this.userTrustedLists = new Map();
     this.userBlockedLists = new Map();
+    this.userPrivacySettings = new Map(); // NEW: Store user's preferred privacy
   }
 
   setClient(client) {
@@ -22,6 +23,7 @@ class VoiceManager {
       const preferredName = this.userChannelNames.get(member.id) || `${member.displayName}'s Room`;
       const trustedUsers = this.userTrustedLists.get(member.id) || [];
       const blockedUsers = this.userBlockedLists.get(member.id) || [];
+      const preferredPrivacy = this.userPrivacySettings.get(member.id) || 'unlocked-seen'; // NEW: Get saved privacy
       
       const channelName = preferredName;
       
@@ -30,7 +32,7 @@ class VoiceManager {
         type: ChannelType.GuildVoice,
         parent: config.voice.categoryId,
         userLimit: config.voice.defaultSettings.limit,
-        permissionOverwrites: this.getDefaultPermissions(member, guild)
+        permissionOverwrites: this.getDefaultPermissions(member, guild, preferredPrivacy) // NEW: Pass privacy
       });
 
       this.tempChannels.set(tempChannel.id, {
@@ -40,12 +42,15 @@ class VoiceManager {
         settings: {
           name: channelName,
           limit: config.voice.defaultSettings.limit,
-          privacy: config.voice.defaultSettings.privacy,
+          privacy: preferredPrivacy, // NEW: Use saved privacy
           region: config.voice.defaultSettings.region
         },
         guildId: guild.id,
         panelMessageId: null
       });
+
+      // Apply privacy settings immediately
+      await this.applyPrivacySettings(tempChannel.id, preferredPrivacy);
 
       for (const userId of trustedUsers) {
         try {
@@ -79,6 +84,101 @@ class VoiceManager {
     }
   }
 
+  // NEW: Get default permissions based on privacy
+  getDefaultPermissions(owner, guild, privacy) {
+    const permissions = [
+      {
+        id: owner.id,
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
+      },
+      {
+        id: config.voice.jailRoleId,
+        deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
+      }
+    ];
+
+    // Set @everyone permissions based on privacy
+    const everyonePerms = {
+      ViewChannel: null,
+      Connect: null
+    };
+
+    switch (privacy) {
+      case 'locked':
+        everyonePerms.ViewChannel = true;  // Can see channel
+        everyonePerms.Connect = false;     // Cannot connect
+        break;
+      case 'unlocked-unseen':
+        everyonePerms.ViewChannel = false; // Cannot see channel
+        everyonePerms.Connect = true;      // Can connect (if they know the channel)
+        break;
+      case 'unlocked-seen':
+        everyonePerms.ViewChannel = true;  // Can see channel
+        everyonePerms.Connect = true;      // Can connect
+        break;
+    }
+
+    permissions.push({
+      id: guild.id,
+      allow: [
+        ...(everyonePerms.ViewChannel ? [PermissionFlagsBits.ViewChannel] : []),
+        ...(everyonePerms.Connect ? [PermissionFlagsBits.Connect] : [])
+      ],
+      deny: [
+        ...(!everyonePerms.ViewChannel ? [PermissionFlagsBits.ViewChannel] : []),
+        ...(!everyonePerms.Connect ? [PermissionFlagsBits.Connect] : [])
+      ]
+    });
+
+    return permissions;
+  }
+
+  // NEW: Apply privacy settings to channel
+  async applyPrivacySettings(channelId, privacyType) {
+    try {
+      const channel = await this.getChannel(channelId);
+      if (!channel) return false;
+
+      const everyonePerms = {
+        ViewChannel: null,
+        Connect: null
+      };
+
+      switch (privacyType) {
+        case 'locked':
+          everyonePerms.ViewChannel = true;   // Everyone can SEE the channel
+          everyonePerms.Connect = false;      // But cannot CONNECT
+          break;
+        case 'unlocked-unseen':
+          everyonePerms.ViewChannel = false;  // Cannot see channel
+          everyonePerms.Connect = true;       // But can connect if they have the link
+          break;
+        case 'unlocked-seen':
+          everyonePerms.ViewChannel = true;   // Can see channel
+          everyonePerms.Connect = true;       // Can connect
+          break;
+      }
+
+      await channel.permissionOverwrites.edit(channel.guild.id, everyonePerms);
+
+      // Update trusted users to always have access
+      const channelData = this.tempChannels.get(channelId);
+      if (channelData) {
+        for (const userId of channelData.trustedUsers) {
+          await channel.permissionOverwrites.edit(userId, {
+            ViewChannel: true,
+            Connect: true
+          });
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error applying privacy settings:', error);
+      return false;
+    }
+  }
+
   setupAutoCleanup(channelId) {
     if (this.cleanupIntervals.has(channelId)) {
       clearInterval(this.cleanupIntervals.get(channelId));
@@ -99,23 +199,6 @@ class VoiceManager {
     }, 30000);
 
     this.cleanupIntervals.set(channelId, interval);
-  }
-
-  getDefaultPermissions(owner, guild) {
-    return [
-      {
-        id: guild.id,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
-      },
-      {
-        id: owner.id,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
-      },
-      {
-        id: config.voice.jailRoleId,
-        deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
-      }
-    ];
   }
 
   async getChannel(channelId) {
@@ -170,32 +253,11 @@ class VoiceManager {
       if (!channel) return { success: false, error: 'Channel not found' };
 
       channelData.settings.privacy = privacyType;
+      
+      // NEW: Save privacy preference for future channels
+      this.userPrivacySettings.set(channelData.ownerId, privacyType);
 
-      const everyonePerms = {
-        ViewChannel: null,
-        Connect: null
-      };
-
-      switch (privacyType) {
-        case 'locked':
-          everyonePerms.ViewChannel = false;
-          everyonePerms.Connect = false;
-          break;
-        case 'unlocked-unseen':
-          everyonePerms.ViewChannel = false;
-          everyonePerms.Connect = true;
-          break;
-        case 'unlocked-seen':
-          everyonePerms.ViewChannel = true;
-          everyonePerms.Connect = true;
-          break;
-      }
-
-      await channel.permissionOverwrites.edit(channel.guild.id, everyonePerms);
-      await channel.permissionOverwrites.edit(config.voice.jailRoleId, {
-        ViewChannel: false,
-        Connect: false
-      });
+      await this.applyPrivacySettings(channelId, privacyType);
 
       return { success: true };
     } catch (error) {
@@ -252,6 +314,7 @@ class VoiceManager {
       
       const channel = await this.getChannel(channelId);
       if (channel && userId !== channelData.ownerId) {
+        // Only remove permissions if not the owner
         await channel.permissionOverwrites.delete(userId);
       }
       return { success: true };
@@ -361,9 +424,11 @@ class VoiceManager {
 
       channelData.ownerId = newOwnerId;
       
+      // Transfer all memory settings
       this.userChannelNames.set(newOwnerId, this.userChannelNames.get(channelData.ownerId) || `${channel.name}`);
       this.userTrustedLists.set(newOwnerId, [...(this.userTrustedLists.get(channelData.ownerId) || [])]);
       this.userBlockedLists.set(newOwnerId, [...(this.userBlockedLists.get(channelData.ownerId) || [])]);
+      this.userPrivacySettings.set(newOwnerId, this.userPrivacySettings.get(channelData.ownerId) || 'unlocked-seen');
 
       return { success: true };
     } catch (error) {
@@ -384,9 +449,11 @@ class VoiceManager {
 
       channelData.ownerId = newOwnerId;
       
+      // Transfer all memory settings
       this.userChannelNames.set(newOwnerId, this.userChannelNames.get(currentOwnerId) || `${channel.name}`);
       this.userTrustedLists.set(newOwnerId, [...(this.userTrustedLists.get(currentOwnerId) || [])]);
       this.userBlockedLists.set(newOwnerId, [...(this.userBlockedLists.get(currentOwnerId) || [])]);
+      this.userPrivacySettings.set(newOwnerId, this.userPrivacySettings.get(currentOwnerId) || 'unlocked-seen');
 
       return { success: true };
     } catch (error) {
@@ -472,7 +539,8 @@ class VoiceManager {
     return {
       channelName: this.userChannelNames.get(userId),
       trustedUsers: this.userTrustedLists.get(userId) || [],
-      blockedUsers: this.userBlockedLists.get(userId) || []
+      blockedUsers: this.userBlockedLists.get(userId) || [],
+      privacy: this.userPrivacySettings.get(userId) || 'unlocked-seen'
     };
   }
 
