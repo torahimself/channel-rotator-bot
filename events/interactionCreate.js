@@ -109,7 +109,7 @@ async function handleButtonInteraction(interaction) {
     case 'claim':
       const claimResult = await voiceManager.claimChannel(channelId, interaction.user.id);
       await interaction.reply({ 
-        content: claimResult ? '✅ تم المطالبة بالغرفة بنجاح!' : '❌ لا يمكن المطالبة بالغرفة - المالك الأصلي لا يزال موجوداً.',
+        content: claimResult.success ? '✅ تم المطالبة بالغرفة بنجاح!' : `❌ ${claimResult.error}`,
         ephemeral: true 
       });
       break;
@@ -122,7 +122,7 @@ async function handleButtonInteraction(interaction) {
     case 'delete':
       const deleteResult = await voiceManager.deleteChannel(channelId, interaction.user.id);
       await interaction.reply({ 
-        content: deleteResult ? '✅ تم حذف الغرفة بنجاح!' : '❌ فشل في حذف الغرفة.',
+        content: deleteResult.success ? '✅ تم حذف الغرفة بنجاح!' : `❌ ${deleteResult.error}`,
         ephemeral: true 
       });
       break;
@@ -166,7 +166,7 @@ async function handleSelectMenuInteraction(interaction) {
     case 'privacy':
       const privacyResult = await voiceManager.updatePrivacy(channelId, value);
       await interaction.reply({ 
-        content: privacyResult ? `✅ تم تعيين الخصوصية إلى: ${value}` : '❌ فشل في تحديث الخصوصية.',
+        content: privacyResult.success ? `✅ تم تعيين الخصوصية إلى: ${value}` : `❌ ${privacyResult.error}`,
         ephemeral: true 
       });
       break;
@@ -174,7 +174,7 @@ async function handleSelectMenuInteraction(interaction) {
     case 'region':
       const regionResult = await voiceManager.changeRegion(channelId, value);
       await interaction.reply({ 
-        content: regionResult ? `✅ تم تعيين المنطقة إلى: ${value}` : '❌ فشل في تحديث المنطقة.',
+        content: regionResult.success ? `✅ تم تعيين المنطقة إلى: ${value}` : `❌ ${regionResult.error}`,
         ephemeral: true 
       });
       break;
@@ -218,7 +218,7 @@ async function handleModalInteraction(interaction) {
       const newName = interaction.fields.getTextInputValue('name_input');
       const nameResult = await voiceManager.updateChannelName(channelId, newName);
       await interaction.reply({ 
-        content: nameResult ? `✅ تم تحديث اسم الغرفة إلى: ${newName}` : '❌ فشل في تحديث اسم الغرفة.',
+        content: nameResult.success ? `✅ تم تحديث اسم الغرفة إلى: ${newName}` : `❌ ${nameResult.error}`,
         ephemeral: true 
       });
       break;
@@ -232,7 +232,7 @@ async function handleModalInteraction(interaction) {
       }
       const limitResult = await voiceManager.updateUserLimit(channelId, limit);
       await interaction.reply({ 
-        content: limitResult ? `✅ تم تعيين الحد الأقصى للمستخدمين إلى: ${limit}` : '❌ فشل في تحديث الحد الأقصى.',
+        content: limitResult.success ? `✅ تم تعيين الحد الأقصى للمستخدمين إلى: ${limit}` : `❌ ${limitResult.error}`,
         ephemeral: true 
       });
       break;
@@ -242,7 +242,7 @@ async function handleModalInteraction(interaction) {
       if (!userToTrust) return;
       const trustResult = await voiceManager.trustUser(channelId, userToTrust);
       await interaction.reply({ 
-        content: trustResult ? `✅ تم منح الثقة للمستخدم <@${userToTrust}>` : '❌ فشل في منح الثقة للمستخدم.',
+        content: trustResult.success ? `✅ تم منح الثقة للمستخدم <@${userToTrust}>` : `❌ ${trustResult.error}`,
         ephemeral: true 
       });
       break;
@@ -252,7 +252,7 @@ async function handleModalInteraction(interaction) {
       if (!userToUntrust) return;
       const untrustResult = await voiceManager.untrustUser(channelId, userToUntrust);
       await interaction.reply({ 
-        content: untrustResult ? `✅ تم إزالة الثقة من المستخدم <@${userToUntrust}>` : '❌ فشل في إزالة الثقة.',
+        content: untrustResult.success ? `✅ تم إزالة الثقة من المستخدم <@${userToUntrust}>` : `❌ ${untrustResult.error}`,
         ephemeral: true 
       });
       break;
@@ -262,7 +262,7 @@ async function handleModalInteraction(interaction) {
       if (!userToKick) return;
       const kickResult = await voiceManager.kickUser(channelId, userToKick);
       await interaction.reply({ 
-        content: kickResult ? `✅ تم طرد المستخدم <@${userToKick}>` : '❌ فشل في طرد المستخدم.',
+        content: kickResult.success ? `✅ تم طرد المستخدم <@${userToKick}>` : `❌ ${kickResult.error}`,
         ephemeral: true 
       });
       break;
@@ -272,7 +272,7 @@ async function handleModalInteraction(interaction) {
       if (!userToBlock) return;
       const blockResult = await voiceManager.blockUser(channelId, userToBlock);
       await interaction.reply({ 
-        content: blockResult ? `✅ تم حظر المستخدم <@${userToBlock}>` : '❌ فشل في حظر المستخدم.',
+        content: blockResult.success ? `✅ تم حظر المستخدم <@${userToBlock}>` : `❌ ${blockResult.error}`,
         ephemeral: true 
       });
       break;
@@ -282,7 +282,7 @@ async function handleModalInteraction(interaction) {
       if (!userToUnblock) return;
       const unblockResult = await voiceManager.unblockUser(channelId, userToUnblock);
       await interaction.reply({ 
-        content: unblockResult ? `✅ تم إلغاء حظر المستخدم <@${userToUnblock}>` : '❌ فشل في إلغاء الحظر.',
+        content: unblockResult.success ? `✅ تم إلغاء حظر المستخدم <@${userToUnblock}>` : `❌ ${unblockResult.error}`,
         ephemeral: true 
       });
       break;
@@ -292,7 +292,7 @@ async function handleModalInteraction(interaction) {
       if (!newOwnerId) return;
       const transferResult = await voiceManager.transferOwnership(channelId, interaction.user.id, newOwnerId);
       await interaction.reply({ 
-        content: transferResult ? `✅ تم نقل الملكية إلى <@${newOwnerId}>!` : '❌ فشل في نقل الملكية.',
+        content: transferResult.success ? `✅ تم نقل الملكية إلى <@${newOwnerId}>!` : `❌ ${transferResult.error}`,
         ephemeral: true 
       });
       break;
