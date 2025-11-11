@@ -269,4 +269,49 @@ async function handleModalInteraction(interaction) {
       if (!userToBlock) return;
       const blockResult = await voiceManager.blockUser(channelId, userToBlock);
       await interaction.reply({ 
-        content: blockResult ? `✅ تم ح
+        content: blockResult ? `✅ تم حظر المستخدم <@${userToBlock}>` : '❌ فشل في حظر المستخدم.',
+        ephemeral: true 
+      });
+      break;
+
+    case 'unblock':
+      const userToUnblock = await extractUserId(interaction, 'user_input');
+      if (!userToUnblock) return;
+      const unblockResult = await voiceManager.unblockUser(channelId, userToUnblock);
+      await interaction.reply({ 
+        content: unblockResult ? `✅ تم إلغاء حظر المستخدم <@${userToUnblock}>` : '❌ فشل في إلغاء الحظر.',
+        ephemeral: true 
+      });
+      break;
+
+    case 'transfer':
+      const newOwnerId = await extractUserId(interaction, 'user_input');
+      if (!newOwnerId) return;
+      const transferResult = await voiceManager.transferOwnership(channelId, interaction.user.id, newOwnerId);
+      await interaction.reply({ 
+        content: transferResult ? `✅ تم نقل الملكية إلى <@${newOwnerId}>!` : '❌ فشل في نقل الملكية.',
+        ephemeral: true 
+      });
+      break;
+  }
+}
+
+async function extractUserId(interaction, fieldName) {
+  const input = interaction.fields.getTextInputValue(fieldName);
+  
+  const mentionMatch = input.match(/<@!?(\d+)>/);
+  if (mentionMatch) return mentionMatch[1];
+  
+  if (/^\d+$/.test(input)) {
+    try {
+      const user = await interaction.client.users.fetch(input);
+      return user.id;
+    } catch {
+      await interaction.reply({ content: '❌ المستخدم غير موجود!', ephemeral: true });
+      return null;
+    }
+  }
+  
+  await interaction.reply({ content: '❌ الرجاء تقديم منشن أو معرف مستخدم صحيح.', ephemeral: true });
+  return null;
+}
