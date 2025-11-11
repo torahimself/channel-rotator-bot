@@ -12,155 +12,151 @@ class PanelManager {
     this.client = client;
   }
 
-  // Create the single main control panel
   async createMainPanel() {
-    const panelChannel = await this.client.channels.fetch(config.voice.controlPanelChannelId);
-    if (!panelChannel) return null;
-
-    // Clear existing messages in the panel channel
     try {
-      const messages = await panelChannel.messages.fetch({ limit: 10 });
-      await panelChannel.bulkDelete(messages);
+      const panelChannel = await this.client.channels.fetch(config.voice.controlPanelChannelId);
+      if (!panelChannel) return null;
+
+      const embed = {
+        title: `🎛️ لوحة تحكم غرف الصوت الرئيسية`,
+        description: `**لوحة التحكم المركزية**\nاستخدم الأزرار أدناه للتحكم في غرفة الصوت الخاصة بك\n\n**ملاحظة:** يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت لاستخدام هذه اللوحة`,
+        fields: [
+          {
+            name: '⚙️ الإعدادات الأساسية',
+            value: 'تغيير الاسم، الحد، الخصوصية، أو المنطقة',
+            inline: false
+          },
+          {
+            name: '👥 إدارة المستخدمين',
+            value: 'إضافة ثقة، إزالة ثقة، طرد، حظر، أو إلغاء حظر المستخدمين',
+            inline: false
+          },
+          {
+            name: '🚀 الإجراءات السريعة',
+            value: 'المطالبة، نقل الملكية، أو حذف الغرفة',
+            inline: false
+          }
+        ],
+        color: 0x5865F2,
+        timestamp: new Date().toISOString(),
+        footer: { text: 'لوحة التحكم المركزية - جميع المستخدمين' }
+      };
+
+      const basicControls = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('voice_name_main')
+          .setLabel('✏️ تغيير الاسم')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('voice_limit_main')
+          .setLabel('👥 تحديد العدد')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('voice_privacy_main')
+          .setLabel('🔒 إعدادات الخصوصية')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('voice_region_main')
+          .setLabel('🌍 تغيير المنطقة')
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      const userManagementPositive = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('voice_trust_main')
+          .setLabel('✅ إضافة ثقة')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('voice_untrust_main')
+          .setLabel('❌ إزالة ثقة')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId('voice_unblock_main')
+          .setLabel('🔓 إلغاء الحظر')
+          .setStyle(ButtonStyle.Success)
+      );
+
+      const userManagementNegative = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('voice_kick_main')
+          .setLabel('👢 طرد مستخدم')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId('voice_block_main')
+          .setLabel('🚫 حظر مستخدم')
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      const quickActions = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('voice_claim_main')
+          .setLabel('🎯 المطالبة بالملكية')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('voice_transfer_main')
+          .setLabel('🔄 نقل الملكية')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('voice_delete_main')
+          .setLabel('🗑️ حذف الغرفة')
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      const message = await panelChannel.send({
+        embeds: [embed],
+        components: [basicControls, userManagementPositive, userManagementNegative, quickActions]
+      });
+
+      this.mainPanelMessageId = message.id;
+      return message.id;
     } catch (error) {
-      console.log('Could not clear panel channel:', error.message);
+      console.error('Error creating main panel:', error);
+      return null;
     }
-
-    const embed = {
-      title: `🎛️ لوحة تحكم غرف الصوت الرئيسية`,
-      description: `**لوحة التحكم المركزية**\nاستخدم الأزرار أدناه للتحكم في غرفة الصوت الخاصة بك\n\n**ملاحظة:** يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت لاستخدام هذه اللوحة`,
-      fields: [
-        {
-          name: '⚙️ الإعدادات الأساسية',
-          value: 'تغيير الاسم، الحد، الخصوصية، أو المنطقة',
-          inline: false
-        },
-        {
-          name: '👥 إدارة المستخدمين',
-          value: 'إضافة ثقة، إزالة ثقة، طرد، حظر، أو إلغاء حظر المستخدمين',
-          inline: false
-        },
-        {
-          name: '🚀 الإجراءات السريعة',
-          value: 'المطالبة، نقل الملكية، أو حذف الغرفة',
-          inline: false
-        }
-      ],
-      color: 0x5865F2,
-      timestamp: new Date().toISOString(),
-      footer: { text: 'لوحة التحكم المركزية - جميع المستخدمين' }
-    };
-
-    // Row 1: Basic Settings (Blue)
-    const basicControls = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('voice_name_main')
-        .setLabel('✏️ تغيير الاسم')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('voice_limit_main')
-        .setLabel('👥 تحديد العدد')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('voice_privacy_main')
-        .setLabel('🔒 إعدادات الخصوصية')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('voice_region_main')
-        .setLabel('🌍 تغيير المنطقة')
-        .setStyle(ButtonStyle.Primary)
-    );
-
-    // Row 2: User Management - Positive actions (Green)
-    const userManagementPositive = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('voice_trust_main')
-        .setLabel('✅ إضافة ثقة')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId('voice_untrust_main')
-        .setLabel('❌ إزالة ثقة')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId('voice_unblock_main')
-        .setLabel('🔓 إلغاء الحظر')
-        .setStyle(ButtonStyle.Success)
-    );
-
-    // Row 3: User Management - Negative actions (Red)
-    const userManagementNegative = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('voice_kick_main')
-        .setLabel('👢 طرد مستخدم')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId('voice_block_main')
-        .setLabel('🚫 حظر مستخدم')
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    // Row 4: Quick Actions (Secondary/Grey)
-    const quickActions = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('voice_claim_main')
-        .setLabel('🎯 المطالبة بالملكية')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId('voice_transfer_main')
-        .setLabel('🔄 نقل الملكية')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId('voice_delete_main')
-        .setLabel('🗑️ حذف الغرفة')
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    const message = await panelChannel.send({
-      embeds: [embed],
-      components: [basicControls, userManagementPositive, userManagementNegative, quickActions]
-    });
-
-    this.mainPanelMessageId = message.id;
-    return message.id;
   }
 
-  // Create per-channel panel (sent to the voice channel)
   async createChannelPanel(channelId, ownerId) {
-    const channel = await voiceManager.getChannel(channelId);
-    if (!channel) return null;
+    try {
+      const channel = await voiceManager.getChannel(channelId);
+      if (!channel) return null;
 
-    const embed = {
-      title: `🎛️ لوحة تحكم غرفتك الصوتية`,
-      description: `**الغرفة:** ${channel.name}\n**المالك:** <@${ownerId}>\n\nاستخدم الأزرار أدناه للتحكم في غرفتك`,
-      color: 0x00ff00,
-      timestamp: new Date().toISOString(),
-      footer: { text: 'لوحة التحكم الخاصة بالغرفة' }
-    };
+      const embed = {
+        title: `🎛️ لوحة تحكم غرفتك الصوتية`,
+        description: `**الغرفة:** ${channel.name}\n**المالك:** <@${ownerId}>\n\nاستخدم الأزرار أدناه للتحكم في غرفتك`,
+        color: 0x00ff00,
+        timestamp: new Date().toISOString(),
+        footer: { text: 'لوحة التحكم الخاصة بالغرفة' }
+      };
 
-    const controls = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`voice_name_${channelId}`)
-        .setLabel('✏️ الاسم')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`voice_limit_${channelId}`)
-        .setLabel('👥 العدد')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`voice_privacy_${channelId}`)
-        .setLabel('🔒 الخصوصية')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`voice_delete_${channelId}`)
-        .setLabel('🗑️ حذف')
-        .setStyle(ButtonStyle.Danger)
-    );
+      const controls = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`voice_name_${channelId}`)
+          .setLabel('✏️ الاسم')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`voice_limit_${channelId}`)
+          .setLabel('👥 العدد')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`voice_privacy_${channelId}`)
+          .setLabel('🔒 الخصوصية')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`voice_delete_${channelId}`)
+          .setLabel('🗑️ حذف')
+          .setStyle(ButtonStyle.Danger)
+      );
 
-    const message = await channel.send({
-      embeds: [embed],
-      components: [controls]
-    });
+      const message = await channel.send({
+        embeds: [embed],
+        components: [controls]
+      });
 
-    return message.id;
+      return message.id;
+    } catch (error) {
+      console.error('Error creating channel panel:', error);
+      return null;
+    }
   }
 
   createNameModal(channelId) {
