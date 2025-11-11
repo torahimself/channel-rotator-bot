@@ -1,4 +1,3 @@
-const { InteractionType, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const commandHandler = require('../handlers/commandHandler');
 const voiceManager = require('../utils/voiceManager');
 const panelManager = require('../utils/panelManager');
@@ -6,24 +5,34 @@ const panelManager = require('../utils/panelManager');
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
-    if (interaction.isCommand()) {
-      commandHandler.executeCommand(interaction);
-      return;
-    }
+    try {
+      if (interaction.isCommand()) {
+        await commandHandler.executeCommand(interaction);
+        return;
+      }
 
-    if (interaction.isButton()) {
-      await handleButtonInteraction(interaction);
-      return;
-    }
+      if (interaction.isButton()) {
+        await handleButtonInteraction(interaction);
+        return;
+      }
 
-    if (interaction.isStringSelectMenu()) {
-      await handleSelectMenuInteraction(interaction);
-      return;
-    }
+      if (interaction.isStringSelectMenu()) {
+        await handleSelectMenuInteraction(interaction);
+        return;
+      }
 
-    if (interaction.isModalSubmit()) {
-      await handleModalInteraction(interaction);
-      return;
+      if (interaction.isModalSubmit()) {
+        await handleModalInteraction(interaction);
+        return;
+      }
+    } catch (error) {
+      console.error('Interaction error:', error);
+      if (interaction.isRepliable()) {
+        await interaction.reply({ 
+          content: '❌ حدث خطأ أثناء معالجة الطلب', 
+          ephemeral: true 
+        }).catch(() => {});
+      }
     }
   },
 };
@@ -33,19 +42,16 @@ async function handleButtonInteraction(interaction) {
   
   let channelId;
   
-  // Determine which channel to target
   if (channelIdentifier === 'main') {
-    // Use main panel - find user's current temp channel
     channelId = voiceManager.getUserCurrentChannel(interaction.user.id);
     if (!channelId) {
       await interaction.reply({ 
-        content: '❌ يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت لاستخدام هذه اللوحة!', 
+        content: '❌ يجب أن تكون في غرفة صوتية تم إنشاؤها بواسطة البوت!', 
         ephemeral: true 
       });
       return;
     }
   } else {
-    // Use specific channel ID from per-channel panel
     channelId = channelIdentifier;
   }
 
@@ -58,15 +64,12 @@ async function handleButtonInteraction(interaction) {
   const userInChannel = interaction.member.voice.channelId === channelId;
   const isOwner = voiceManager.isOwner(channelId, interaction.user.id);
   
-  // Special case for claim - user doesn't need to be owner but must be in channel
   if (action === 'claim') {
     if (!userInChannel) {
       await interaction.reply({ content: '❌ يجب أن تكون في الغرفة الصوتية للمطالبة بها!', ephemeral: true });
       return;
     }
-    // Allow claim even if not current owner
   } else {
-    // For all other actions, user must be owner and in channel
     if (!userInChannel || !isOwner) {
       await interaction.reply({ content: '❌ يجب أن تكون المالك وتكون في الغرفة الصوتية!', ephemeral: true });
       return;
@@ -297,21 +300,21 @@ async function handleModalInteraction(interaction) {
 }
 
 async function extractUserId(interaction, fieldName) {
-  const input = interaction.fields.getTextInputValue(fieldName);
-  
-  const mentionMatch = input.match(/<@!?(\d+)>/);
-  if (mentionMatch) return mentionMatch[1];
-  
-  if (/^\d+$/.test(input)) {
-    try {
+  try {
+    const input = interaction.fields.getTextInputValue(fieldName);
+    
+    const mentionMatch = input.match(/<@!?(\d+)>/);
+    if (mentionMatch) return mentionMatch[1];
+    
+    if (/^\d+$/.test(input)) {
       const user = await interaction.client.users.fetch(input);
       return user.id;
-    } catch {
-      await interaction.reply({ content: '❌ المستخدم غير موجود!', ephemeral: true });
-      return null;
     }
+    
+    await interaction.reply({ content: '❌ الرجاء تقديم منشن أو معرف مستخدم صحيح.', ephemeral: true });
+    return null;
+  } catch (error) {
+    await interaction.reply({ content: '❌ المستخدم غير موجود!', ephemeral: true });
+    return null;
   }
-  
-  await interaction.reply({ content: '❌ الرجاء تقديم منشن أو معرف مستخدم صحيح.', ephemeral: true });
-  return null;
 }
