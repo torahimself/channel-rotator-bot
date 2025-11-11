@@ -6,12 +6,14 @@ const config = require('./config.js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Discord client
+// Discord client with CORRECT intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMembers, // ADD THIS
+    GatewayIntentBits.MessageContent // ADD THIS
   ],
 });
 
