@@ -1,7 +1,7 @@
 {
   "name": "channel-rotator-bot",
   "version": "1.0.0",
-  "description": "Automatically rotates Discord channels every 24 hours",
+  "description": "Advanced Discord bot with multiple features",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -14,7 +14,8 @@
     "discord",
     "bot",
     "channel",
-    "rotation"
+    "rotation",
+    "voice"
   ],
   "author": "Your Name",
   "license": "MIT"
