@@ -5,26 +5,47 @@ const commands = new Map();
 const commandCategories = [];
 
 function loadCommands() {
-  const commandsPath = path.join(__dirname, '../commands');
-  const categories = fs.readdirSync(commandsPath);
-
-  for (const category of categories) {
-    const categoryPath = path.join(commandsPath, category);
-    if (!fs.statSync(categoryPath).isDirectory()) continue;
-
-    const commandFiles = fs.readdirSync(categoryPath).filter(file => file.endsWith('.js'));
-    commandCategories.push(category);
-
-    for (const file of commandFiles) {
-      const command = require(path.join(categoryPath, file));
-      commands.set(command.data.name, {
-        ...command,
-        category: category
-      });
+  try {
+    const commandsPath = path.join(__dirname, '../commands');
+    
+    // Check if commands directory exists
+    if (!fs.existsSync(commandsPath)) {
+      console.log('⚠️  Commands directory not found, creating...');
+      fs.mkdirSync(commandsPath, { recursive: true });
+      return;
     }
-  }
 
-  console.log(`✅ Loaded ${commands.size} commands across ${commandCategories.length} categories`);
+    const categories = fs.readdirSync(commandsPath);
+
+    for (const category of categories) {
+      const categoryPath = path.join(commandsPath, category);
+      if (!fs.statSync(categoryPath).isDirectory()) continue;
+
+      const commandFiles = fs.readdirSync(categoryPath).filter(file => file.endsWith('.js'));
+      commandCategories.push(category);
+
+      for (const file of commandFiles) {
+        try {
+          const commandPath = path.join(categoryPath, file);
+          const command = require(commandPath);
+          
+          if (command.data && command.execute) {
+            commands.set(command.data.name, {
+              ...command,
+              category: category
+            });
+            console.log(`✅ Loaded command: ${command.data.name}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error loading command ${file}:`, error.message);
+        }
+      }
+    }
+
+    console.log(`✅ Loaded ${commands.size} commands across ${commandCategories.length} categories`);
+  } catch (error) {
+    console.error('❌ Error loading commands:', error);
+  }
 }
 
 function getCommands() {
@@ -40,7 +61,11 @@ function executeCommand(interaction) {
     return true;
   } catch (error) {
     console.error(`Error executing command ${interaction.commandName}:`, error);
-    interaction.reply({ content: 'There was an error executing this command!', ephemeral: true });
+    if (interaction.replied || interaction.deferred) {
+      interaction.followUp({ content: 'There was an error executing this command!', ephemeral: true });
+    } else {
+      interaction.reply({ content: 'There was an error executing this command!', ephemeral: true });
+    }
     return true;
   }
 }
