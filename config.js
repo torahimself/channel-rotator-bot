@@ -1,6 +1,8 @@
 module.exports = {
+  // Bot Configuration
   botToken: process.env.BOT_TOKEN,
   
+  // Channel Rotation Config
   rotation: {
     serverId: "1357219315820269578",
     templateChannelId: "1357388121704239134",
@@ -14,14 +16,13 @@ module.exports = {
     rotationInterval: 24 * 60 * 60 * 1000,
   },
   
+  // Voice System Config
   voice: {
     createChannelId: "1437800522991009792",
     controlPanelChannelId: "1437799663326593105", 
     categoryId: "1368516666241060884",
-    jailRoleId: "1357289247664640043", // Jail role that can NEVER join
+    jailRoleId: "1357289247664640043",
     maxTrustedUsers: 50,
-    autoCleanup: true,
-    cleanupInterval: 5 * 60 * 1000,
     
     regions: [
       'brazil', 'hongkong', 'india', 'japan', 'rotterdam', 
@@ -29,16 +30,10 @@ module.exports = {
       'us-central', 'us-east', 'us-south', 'us-west'
     ],
     
-    privacyOptions: {
-      'locked': '🔒 مقفل - لا أحد يستطيع الدخول',
-      'unlocked-unseen': '👻 مفتوح غير مرئي - يمكن الدخول لكن لا يمكن الرؤية',
-      'unlocked-seen': '👀 مفتوح مرئي - يمكن الرؤية والدخول'
-    },
-    
     defaultSettings: {
       name: "غرفة {username}",
       limit: 0,
-      privacy: 'unlocked-seen', // Changed to seen by default
+      privacy: 'unlocked-seen',
       region: 'automatic'
     }
   }
