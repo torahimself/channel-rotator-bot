@@ -13,12 +13,51 @@ module.exports = {
       "1357384022388379891",
       "1437107048348123136"
     ],
-    rotationInterval: 24 * 60 * 60 * 1000,
+    rotationInterval: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
   },
   
   // Voice System Config
   voice: {
-    createChannelId: "YOUR_VOICE_CREATE_CHANNEL_ID", // Replace with actual channel ID
-    categoryId: "YOUR_VOICE_CATEGORY_ID" // Replace with actual category ID
+    // REPLACE THESE WITH YOUR ACTUAL CHANNEL IDs:
+    createChannelId: "YOUR_CREATE_VOICE_CHANNEL_ID", // Users join this to create temp voice
+    controlPanelChannelId: "YOUR_CONTROL_PANEL_CHANNEL_ID", // Where control panels appear
+    categoryId: "YOUR_VOICE_CATEGORY_ID", // Where temp voice channels are created
+    
+    // System Settings
+    maxTrustedUsers: 50,
+    autoCleanup: true, // Auto-delete empty temp channels
+    cleanupInterval: 5 * 60 * 1000, // 5 minutes in milliseconds
+    
+    // Available Voice Regions
+    regions: [
+      'brazil',
+      'hongkong', 
+      'india',
+      'japan',
+      'rotterdam',
+      'russia',
+      'singapore',
+      'southafrica',
+      'sydney',
+      'us-central', 
+      'us-east',
+      'us-south',
+      'us-west'
+    ],
+    
+    // Privacy Options
+    privacyOptions: {
+      'locked': '🔒 Locked - No one can join',
+      'unlocked-unseen': '👻 Unlocked Unseen - Can join but cannot see',
+      'unlocked-seen': '👀 Unlocked Seen - Can see and join'
+    },
+    
+    // Default Channel Settings
+    defaultSettings: {
+      name: "{username}'s Room",
+      limit: 0, // 0 = no limit
+      privacy: 'unlocked-seen',
+      region: 'automatic'
+    }
   }
 };
