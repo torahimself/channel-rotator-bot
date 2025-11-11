@@ -1,4 +1,4 @@
-const { ChannelType } = require('discord.js');
+const { ChannelType, PermissionFlagsBits } = require('discord.js');
 const config = require('../config.js');
 
 class VoiceManager {
@@ -51,7 +51,6 @@ class VoiceManager {
   }
 
   setupAutoCleanup(channelId) {
-    // Clear existing interval
     if (this.cleanupIntervals.has(channelId)) {
       clearInterval(this.cleanupIntervals.get(channelId));
     }
@@ -77,15 +76,15 @@ class VoiceManager {
     return [
       {
         id: guild.id,
-        allow: ['ViewChannel', 'Connect']
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
       },
       {
         id: owner.id,
-        allow: ['ViewChannel', 'Connect', 'ManageChannels', 'MoveMembers']
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers]
       },
       {
         id: config.voice.jailRoleId,
-        deny: ['ViewChannel', 'Connect']
+        deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
       }
     ];
   }
@@ -356,18 +355,16 @@ class VoiceManager {
 
       if (requesterId !== 'system') {
         const requester = channel.guild.members.cache.get(requesterId);
-        if (channelData.ownerId !== requesterId && !requester.permissions.has('Administrator')) {
+        if (channelData.ownerId !== requesterId && !requester.permissions.has(PermissionFlagsBits.Administrator)) {
           return false;
         }
       }
 
-      // Clear cleanup interval
       if (this.cleanupIntervals.has(channelId)) {
         clearInterval(this.cleanupIntervals.get(channelId));
         this.cleanupIntervals.delete(channelId);
       }
 
-      // Move members out
       for (const [memberId, member] of channel.members) {
         try {
           await member.voice.setChannel(null);
@@ -376,7 +373,6 @@ class VoiceManager {
         }
       }
 
-      // Delete panel message
       if (channelData.panelMessageId) {
         try {
           const panelChannel = await this.client.channels.fetch(config.voice.controlPanelChannelId);
