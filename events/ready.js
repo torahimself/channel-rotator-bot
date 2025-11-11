@@ -30,6 +30,14 @@ module.exports = {
       console.log('ℹ️ Slash commands not registered (bot may not have permission)');
     }
 
+    // Create the main control panel
+    try {
+      await panelManager.createMainPanel();
+      console.log('✅ Main control panel created!');
+    } catch (error) {
+      console.log('❌ Could not create main panel:', error.message);
+    }
+
     // Start the rotation system
     rotationSystem.scheduleNextRotation();
     rotationSystem.startRotationCycle(client);
