@@ -31,8 +31,18 @@ module.exports = {
 async function handleButtonInteraction(interaction) {
   const [action, channelId] = interaction.customId.split('_').slice(1);
   
-  if (!voiceManager.isOwner(channelId, interaction.user.id)) {
-    await interaction.reply({ content: '❌ You are not the owner of this voice channel!', ephemeral: true });
+  // Fix: Check if user is in the voice channel AND is the owner
+  const channelData = voiceManager.getChannelData(channelId);
+  if (!channelData) {
+    await interaction.reply({ content: '❌ لم تعد هذه الغرفة موجودة!', ephemeral: true });
+    return;
+  }
+
+  const userInChannel = interaction.member.voice.channelId === channelId;
+  const isOwner = voiceManager.isOwner(channelId, interaction.user.id);
+  
+  if (!userInChannel || !isOwner) {
+    await interaction.reply({ content: '❌ يجب أن تكون المالك وتكون في الغرفة الصوتية!', ephemeral: true });
     return;
   }
 
@@ -69,7 +79,7 @@ async function handleButtonInteraction(interaction) {
     case 'claim':
       const claimResult = await voiceManager.claimChannel(channelId, interaction.user.id);
       await interaction.reply({ 
-        content: claimResult ? '✅ Successfully claimed the channel!' : '❌ Cannot claim channel - owner is still present.',
+        content: claimResult ? '✅ تم المطالبة بالغرفة بنجاح!' : '❌ لا يمكن المطالبة بالغرفة - المالك الأصلي لا يزال موجوداً.',
         ephemeral: true 
       });
       break;
@@ -82,7 +92,7 @@ async function handleButtonInteraction(interaction) {
     case 'delete':
       const deleteResult = await voiceManager.deleteChannel(channelId, interaction.user.id);
       await interaction.reply({ 
-        content: deleteResult ? '✅ Channel deleted successfully!' : '❌ Failed to delete channel.',
+        content: deleteResult ? '✅ تم حذف الغرفة بنجاح!' : '❌ فشل في حذف الغرفة.',
         ephemeral: true 
       });
       break;
@@ -93,8 +103,18 @@ async function handleSelectMenuInteraction(interaction) {
   const [action, channelId] = interaction.customId.split('_').slice(1);
   const value = interaction.values[0];
 
-  if (!voiceManager.isOwner(channelId, interaction.user.id)) {
-    await interaction.reply({ content: '❌ You are not the owner of this voice channel!', ephemeral: true });
+  // Fix: Check if user is in the voice channel AND is the owner
+  const channelData = voiceManager.getChannelData(channelId);
+  if (!channelData) {
+    await interaction.reply({ content: '❌ لم تعد هذه الغرفة موجودة!', ephemeral: true });
+    return;
+  }
+
+  const userInChannel = interaction.member.voice.channelId === channelId;
+  const isOwner = voiceManager.isOwner(channelId, interaction.user.id);
+  
+  if (!userInChannel || !isOwner) {
+    await interaction.reply({ content: '❌ يجب أن تكون المالك وتكون في الغرفة الصوتية!', ephemeral: true });
     return;
   }
 
@@ -102,7 +122,7 @@ async function handleSelectMenuInteraction(interaction) {
     case 'privacy':
       const privacyResult = await voiceManager.updatePrivacy(channelId, value);
       await interaction.reply({ 
-        content: privacyResult ? `✅ Privacy set to: ${value}` : '❌ Failed to update privacy.',
+        content: privacyResult ? `✅ تم تعيين الخصوصية إلى: ${value}` : '❌ فشل في تحديث الخصوصية.',
         ephemeral: true 
       });
       break;
@@ -110,7 +130,7 @@ async function handleSelectMenuInteraction(interaction) {
     case 'region':
       const regionResult = await voiceManager.changeRegion(channelId, value);
       await interaction.reply({ 
-        content: regionResult ? `✅ Region set to: ${value}` : '❌ Failed to update region.',
+        content: regionResult ? `✅ تم تعيين المنطقة إلى: ${value}` : '❌ فشل في تحديث المنطقة.',
         ephemeral: true 
       });
       break;
@@ -120,8 +140,18 @@ async function handleSelectMenuInteraction(interaction) {
 async function handleModalInteraction(interaction) {
   const [action, channelId] = interaction.customId.split('_').slice(1);
 
-  if (!voiceManager.isOwner(channelId, interaction.user.id)) {
-    await interaction.reply({ content: '❌ You are not the owner of this voice channel!', ephemeral: true });
+  // Fix: Check if user is in the voice channel AND is the owner
+  const channelData = voiceManager.getChannelData(channelId);
+  if (!channelData) {
+    await interaction.reply({ content: '❌ لم تعد هذه الغرفة موجودة!', ephemeral: true });
+    return;
+  }
+
+  const userInChannel = interaction.member.voice.channelId === channelId;
+  const isOwner = voiceManager.isOwner(channelId, interaction.user.id);
+  
+  if (!userInChannel || !isOwner) {
+    await interaction.reply({ content: '❌ يجب أن تكون المالك وتكون في الغرفة الصوتية!', ephemeral: true });
     return;
   }
 
@@ -130,7 +160,7 @@ async function handleModalInteraction(interaction) {
       const newName = interaction.fields.getTextInputValue('name_input');
       const nameResult = await voiceManager.updateChannelName(channelId, newName);
       await interaction.reply({ 
-        content: nameResult ? `✅ Channel name updated to: ${newName}` : '❌ Failed to update channel name.',
+        content: nameResult ? `✅ تم تحديث اسم الغرفة إلى: ${newName}` : '❌ فشل في تحديث اسم الغرفة.',
         ephemeral: true 
       });
       break;
@@ -139,12 +169,12 @@ async function handleModalInteraction(interaction) {
       const limitInput = interaction.fields.getTextInputValue('limit_input');
       const limit = parseInt(limitInput);
       if (isNaN(limit) || limit < 0 || limit > 99) {
-        await interaction.reply({ content: '❌ Please enter a valid number between 0 and 99.', ephemeral: true });
+        await interaction.reply({ content: '❌ الرجاء إدخال رقم صحيح بين 0 و 99.', ephemeral: true });
         return;
       }
       const limitResult = await voiceManager.updateUserLimit(channelId, limit);
       await interaction.reply({ 
-        content: limitResult ? `✅ User limit set to: ${limit}` : '❌ Failed to update user limit.',
+        content: limitResult ? `✅ تم تعيين الحد الأقصى للمستخدمين إلى: ${limit}` : '❌ فشل في تحديث الحد الأقصى.',
         ephemeral: true 
       });
       break;
@@ -154,7 +184,7 @@ async function handleModalInteraction(interaction) {
       if (!userToTrust) return;
       const trustResult = await voiceManager.trustUser(channelId, userToTrust);
       await interaction.reply({ 
-        content: trustResult ? `✅ User <@${userToTrust}> has been trusted.` : '❌ Failed to trust user.',
+        content: trustResult ? `✅ تم منح الثقة للمستخدم <@${userToTrust}>` : '❌ فشل في منح الثقة للمستخدم.',
         ephemeral: true 
       });
       break;
@@ -164,7 +194,7 @@ async function handleModalInteraction(interaction) {
       if (!userToUntrust) return;
       const untrustResult = await voiceManager.untrustUser(channelId, userToUntrust);
       await interaction.reply({ 
-        content: untrustResult ? `✅ User <@${userToUntrust}> has been untrusted.` : '❌ Failed to untrust user.',
+        content: untrustResult ? `✅ تم إزالة الثقة من المستخدم <@${userToUntrust}>` : '❌ فشل في إزالة الثقة.',
         ephemeral: true 
       });
       break;
@@ -174,7 +204,7 @@ async function handleModalInteraction(interaction) {
       if (!userToKick) return;
       const kickResult = await voiceManager.kickUser(channelId, userToKick);
       await interaction.reply({ 
-        content: kickResult ? `✅ User <@${userToKick}> has been kicked.` : '❌ Failed to kick user.',
+        content: kickResult ? `✅ تم طرد المستخدم <@${userToKick}>` : '❌ فشل في طرد المستخدم.',
         ephemeral: true 
       });
       break;
@@ -184,7 +214,7 @@ async function handleModalInteraction(interaction) {
       if (!userToBlock) return;
       const blockResult = await voiceManager.blockUser(channelId, userToBlock);
       await interaction.reply({ 
-        content: blockResult ? `✅ User <@${userToBlock}> has been blocked.` : '❌ Failed to block user.',
+        content: blockResult ? `✅ تم حظر المستخدم <@${userToBlock}>` : '❌ فشل في حظر المستخدم.',
         ephemeral: true 
       });
       break;
@@ -194,7 +224,7 @@ async function handleModalInteraction(interaction) {
       if (!userToUnblock) return;
       const unblockResult = await voiceManager.unblockUser(channelId, userToUnblock);
       await interaction.reply({ 
-        content: unblockResult ? `✅ User <@${userToUnblock}> has been unblocked.` : '❌ Failed to unblock user.',
+        content: unblockResult ? `✅ تم إلغاء حظر المستخدم <@${userToUnblock}>` : '❌ فشل في إلغاء الحظر.',
         ephemeral: true 
       });
       break;
@@ -204,7 +234,7 @@ async function handleModalInteraction(interaction) {
       if (!newOwnerId) return;
       const transferResult = await voiceManager.transferOwnership(channelId, interaction.user.id, newOwnerId);
       await interaction.reply({ 
-        content: transferResult ? `✅ Ownership transferred to <@${newOwnerId}>!` : '❌ Failed to transfer ownership.',
+        content: transferResult ? `✅ تم نقل الملكية إلى <@${newOwnerId}>!` : '❌ فشل في نقل الملكية.',
         ephemeral: true 
       });
       break;
@@ -224,11 +254,11 @@ async function extractUserId(interaction, fieldName) {
       const user = await interaction.client.users.fetch(input);
       return user.id;
     } catch {
-      await interaction.reply({ content: '❌ User not found!', ephemeral: true });
+      await interaction.reply({ content: '❌ المستخدم غير موجود!', ephemeral: true });
       return null;
     }
   }
   
-  await interaction.reply({ content: '❌ Please provide a valid user mention or ID.', ephemeral: true });
+  await interaction.reply({ content: '❌ الرجاء تقديم منشن أو معرف مستخدم صحيح.', ephemeral: true });
   return null;
 }
