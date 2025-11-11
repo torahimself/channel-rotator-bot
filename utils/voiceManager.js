@@ -6,9 +6,9 @@ class VoiceManager {
     this.tempChannels = new Map();
     this.client = null;
     this.cleanupIntervals = new Map();
-    this.userChannelNames = new Map(); // Store user's preferred channel names
-    this.userTrustedLists = new Map(); // Store user's trusted users
-    this.userBlockedLists = new Map(); // Store user's blocked users
+    this.userChannelNames = new Map();
+    this.userTrustedLists = new Map();
+    this.userBlockedLists = new Map();
   }
 
   setClient(client) {
@@ -19,7 +19,6 @@ class VoiceManager {
     try {
       const guild = member.guild;
       
-      // Get user's preferred settings
       const preferredName = this.userChannelNames.get(member.id) || `${member.displayName}'s Room`;
       const trustedUsers = this.userTrustedLists.get(member.id) || [];
       const blockedUsers = this.userBlockedLists.get(member.id) || [];
@@ -36,8 +35,8 @@ class VoiceManager {
 
       this.tempChannels.set(tempChannel.id, {
         ownerId: member.id,
-        trustedUsers: [...trustedUsers], // Copy the trusted users
-        blockedUsers: [...blockedUsers], // Copy the blocked users
+        trustedUsers: [...trustedUsers],
+        blockedUsers: [...blockedUsers],
         settings: {
           name: channelName,
           limit: config.voice.defaultSettings.limit,
@@ -48,7 +47,6 @@ class VoiceManager {
         panelMessageId: null
       });
 
-      // Apply trusted users permissions
       for (const userId of trustedUsers) {
         try {
           await tempChannel.permissionOverwrites.edit(userId, {
@@ -60,7 +58,6 @@ class VoiceManager {
         }
       }
 
-      // Apply blocked users permissions
       for (const userId of blockedUsers) {
         try {
           await tempChannel.permissionOverwrites.edit(userId, {
@@ -72,7 +69,6 @@ class VoiceManager {
         }
       }
 
-      // Setup auto-cleanup
       this.setupAutoCleanup(tempChannel.id);
 
       await member.voice.setChannel(tempChannel);
@@ -113,7 +109,7 @@ class VoiceManager {
       },
       {
         id: owner.id,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] // REMOVED ManageChannels and MoveMembers
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
       },
       {
         id: config.voice.jailRoleId,
@@ -133,8 +129,6 @@ class VoiceManager {
       if (!channelData) return false;
 
       channelData.settings.name = newName;
-      
-      // Store the user's preferred name for future channels
       this.userChannelNames.set(channelData.ownerId, newName);
       
       const channel = await this.getChannel(channelId);
@@ -213,12 +207,18 @@ class VoiceManager {
   async trustUser(channelId, userId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData || channelData.trustedUsers.length >= config.voice.maxTrustedUsers) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
+      
+      if (channelData.trustedUsers.length >= config.voice.maxTrustedUsers) {
+        return { 
+          success: false, 
+          error: `❌ Maximum ${config.voice.maxTrustedUsers} trusted users reached! Please untrust someone first.` 
+        };
+      }
 
       if (!channelData.trustedUsers.includes(userId)) {
         channelData.trustedUsers.push(userId);
         
-        // Add to user's permanent trusted list
         const userTrustedList = this.userTrustedLists.get(channelData.ownerId) || [];
         if (!userTrustedList.includes(userId)) {
           userTrustedList.push(userId);
@@ -233,21 +233,20 @@ class VoiceManager {
           });
         }
       }
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error trusting user:', error);
-      return false;
+      return { success: false, error: 'Failed to trust user' };
     }
   }
 
   async untrustUser(channelId, userId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       channelData.trustedUsers = channelData.trustedUsers.filter(id => id !== userId);
       
-      // Remove from user's permanent trusted list
       const userTrustedList = this.userTrustedLists.get(channelData.ownerId) || [];
       this.userTrustedLists.set(channelData.ownerId, userTrustedList.filter(id => id !== userId));
       
@@ -255,22 +254,21 @@ class VoiceManager {
       if (channel && userId !== channelData.ownerId) {
         await channel.permissionOverwrites.delete(userId);
       }
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error untrusting user:', error);
-      return false;
+      return { success: false, error: 'Failed to untrust user' };
     }
   }
 
   async blockUser(channelId, userId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       if (!channelData.blockedUsers.includes(userId)) {
         channelData.blockedUsers.push(userId);
         
-        // Add to user's permanent blocked list
         const userBlockedList = this.userBlockedLists.get(channelData.ownerId) || [];
         if (!userBlockedList.includes(userId)) {
           userBlockedList.push(userId);
@@ -285,21 +283,20 @@ class VoiceManager {
           });
         }
       }
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error blocking user:', error);
-      return false;
+      return { success: false, error: 'Failed to block user' };
     }
   }
 
   async unblockUser(channelId, userId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       channelData.blockedUsers = channelData.blockedUsers.filter(id => id !== userId);
       
-      // Remove from user's permanent blocked list
       const userBlockedList = this.userBlockedLists.get(channelData.ownerId) || [];
       this.userBlockedLists.set(channelData.ownerId, userBlockedList.filter(id => id !== userId));
       
@@ -307,34 +304,34 @@ class VoiceManager {
       if (channel) {
         await channel.permissionOverwrites.delete(userId);
       }
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error unblocking user:', error);
-      return false;
+      return { success: false, error: 'Failed to unblock user' };
     }
   }
 
   async kickUser(channelId, userId) {
     try {
       const channel = await this.getChannel(channelId);
-      if (!channel) return false;
+      if (!channel) return { success: false, error: 'Channel not found' };
 
       const member = channel.guild.members.cache.get(userId);
       if (member && member.voice.channelId === channelId) {
         await member.voice.setChannel(null);
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: 'User not in channel' };
     } catch (error) {
       console.error('Error kicking user:', error);
-      return false;
+      return { success: false, error: 'Failed to kick user' };
     }
   }
 
   async changeRegion(channelId, region) {
     try {
       const channel = await this.getChannel(channelId);
-      if (!channel) return false;
+      if (!channel) return { success: false, error: 'Channel not found' };
 
       const channelData = this.tempChannels.get(channelId);
       if (channelData) {
@@ -342,74 +339,74 @@ class VoiceManager {
       }
 
       await channel.setRTCRegion(region);
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error changing region:', error);
-      return false;
+      return { success: false, error: 'Failed to change region' };
     }
   }
 
   async claimChannel(channelId, newOwnerId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       const channel = await this.getChannel(channelId);
-      if (!channel) return false;
+      if (!channel) return { success: false, error: 'Channel not found' };
 
       const currentOwnerInChannel = channel.members.has(channelData.ownerId);
-      if (currentOwnerInChannel) return false;
+      if (currentOwnerInChannel) {
+        return { success: false, error: 'Cannot claim channel - current owner is still present' };
+      }
 
-      // Transfer ownership data
       channelData.ownerId = newOwnerId;
       
-      // Transfer memory settings to new owner
       this.userChannelNames.set(newOwnerId, this.userChannelNames.get(channelData.ownerId) || `${channel.name}`);
       this.userTrustedLists.set(newOwnerId, [...(this.userTrustedLists.get(channelData.ownerId) || [])]);
       this.userBlockedLists.set(newOwnerId, [...(this.userBlockedLists.get(channelData.ownerId) || [])]);
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error claiming channel:', error);
-      return false;
+      return { success: false, error: 'Failed to claim channel' };
     }
   }
 
   async transferOwnership(channelId, currentOwnerId, newOwnerId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData || channelData.ownerId !== currentOwnerId) return false;
+      if (!channelData || channelData.ownerId !== currentOwnerId) {
+        return { success: false, error: 'You are not the owner of this channel' };
+      }
 
       const channel = await this.getChannel(channelId);
-      if (!channel) return false;
+      if (!channel) return { success: false, error: 'Channel not found' };
 
-      // Transfer ownership data
       channelData.ownerId = newOwnerId;
       
-      // Transfer memory settings to new owner
       this.userChannelNames.set(newOwnerId, this.userChannelNames.get(currentOwnerId) || `${channel.name}`);
       this.userTrustedLists.set(newOwnerId, [...(this.userTrustedLists.get(currentOwnerId) || [])]);
       this.userBlockedLists.set(newOwnerId, [...(this.userBlockedLists.get(currentOwnerId) || [])]);
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error transferring ownership:', error);
-      return false;
+      return { success: false, error: 'Failed to transfer ownership' };
     }
   }
 
   async deleteChannel(channelId, requesterId) {
     try {
       const channelData = this.tempChannels.get(channelId);
-      if (!channelData) return false;
+      if (!channelData) return { success: false, error: 'Channel not found' };
 
       const channel = await this.getChannel(channelId);
-      if (!channel) return false;
+      if (!channel) return { success: false, error: 'Channel not found' };
 
       if (requesterId !== 'system') {
         const requester = channel.guild.members.cache.get(requesterId);
         if (channelData.ownerId !== requesterId && !requester.permissions.has(PermissionFlagsBits.Administrator)) {
-          return false;
+          return { success: false, error: 'You are not the owner of this channel' };
         }
       }
 
@@ -438,10 +435,10 @@ class VoiceManager {
 
       await channel.delete();
       this.tempChannels.delete(channelId);
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error deleting channel:', error);
-      return false;
+      return { success: false, error: 'Failed to delete channel' };
     }
   }
 
@@ -471,13 +468,17 @@ class VoiceManager {
     return null;
   }
 
-  // Get user's memory data (for debugging)
   getUserMemory(userId) {
     return {
       channelName: this.userChannelNames.get(userId),
       trustedUsers: this.userTrustedLists.get(userId) || [],
       blockedUsers: this.userBlockedLists.get(userId) || []
     };
+  }
+
+  getTrustedUsersCount(userId) {
+    const trustedList = this.userTrustedLists.get(userId) || [];
+    return trustedList.length;
   }
 }
 
