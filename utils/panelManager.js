@@ -207,17 +207,17 @@ class PanelManager {
         .addOptions(
           {
             label: '🔒 مقفل',
-            description: 'لا أحد يستطيع الدخول',
+            description: 'الجميع يرى الغرفة، فقط الثقات يمكنهم الدخول',
             value: 'locked'
           },
           {
             label: '👻 مفتوح غير مرئي',
-            description: 'يمكن الدخول لكن لا يمكن الرؤية',
+            description: 'الغرفة مخفية، فقط الثقات يمكنهم رؤيتها والدخول',
             value: 'unlocked-unseen'
           },
           {
             label: '👀 مفتوح مرئي',
-            description: 'يمكن الرؤية والدخول',
+            description: 'الجميع يرى الغرفة ويمكنهم الدخول',
             value: 'unlocked-seen'
           }
         )
