@@ -6,12 +6,26 @@ module.exports = {
     .setDescription('Check bot latency'),
   
   async execute(interaction) {
-    const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true });
-    const latency = sent.createdTimestamp - interaction.createdTimestamp;
-    const apiLatency = Math.round(interaction.client.ws.ping);
-
-    await interaction.editReply({
-      content: `🏓 Pong! \n📡 Latency: ${latency}ms \n🔧 API Latency: ${apiLatency}ms`
-    });
+    try {
+      // Reply immediately to avoid interaction timeout
+      await interaction.deferReply();
+      
+      const apiLatency = Math.round(interaction.client.ws.ping);
+      
+      // Calculate round-trip latency
+      const startTime = Date.now();
+      await interaction.editReply('🏓 Pinging...');
+      const endTime = Date.now();
+      const roundTripLatency = endTime - startTime;
+      
+      await interaction.editReply({
+        content: `🏓 Pong! \n📡 Round-trip: ${roundTripLatency}ms \n🔧 API Latency: ${apiLatency}ms`
+      });
+    } catch (error) {
+      console.error('Ping command error:', error);
+      if (!interaction.replied) {
+        await interaction.reply({ content: '❌ Error calculating ping!', ephemeral: true });
+      }
+    }
   },
 };
