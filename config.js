@@ -15,9 +15,10 @@ module.exports = {
   },
   
   voice: {
-    createChannelId: "1437800522991009792", // Users join this to create temp voice
-    controlPanelChannelId: "1437799663326593105", // Where control panels appear
-    categoryId: "1368516666241060884", // Where temp voice channels are created
+    createChannelId: "1437800522991009792",
+    controlPanelChannelId: "1437799663326593105", 
+    categoryId: "1368516666241060884",
+    jailRoleId: "1357289247664640043", // Jail role that can NEVER join
     maxTrustedUsers: 50,
     autoCleanup: true,
     cleanupInterval: 5 * 60 * 1000,
@@ -29,15 +30,15 @@ module.exports = {
     ],
     
     privacyOptions: {
-      'locked': '🔒 Locked - No one can join',
-      'unlocked-unseen': '👻 Unlocked Unseen - Can join but cannot see',
-      'unlocked-seen': '👀 Unlocked Seen - Can see and join'
+      'locked': '🔒 مقفل - لا أحد يستطيع الدخول',
+      'unlocked-unseen': '👻 مفتوح غير مرئي - يمكن الدخول لكن لا يمكن الرؤية',
+      'unlocked-seen': '👀 مفتوح مرئي - يمكن الرؤية والدخول'
     },
     
     defaultSettings: {
-      name: "{username}'s Room",
+      name: "غرفة {username}",
       limit: 0,
-      privacy: 'unlocked-seen',
+      privacy: 'unlocked-seen', // Changed to seen by default
       region: 'automatic'
     }
   }
