@@ -1,6 +1,7 @@
 const { REST, Routes } = require('discord.js');
 const config = require('../config.js');
 const commandHandler = require('../handlers/commandHandler');
+const rotationSystem = require('../utils/rotationSystem');
 
 module.exports = {
   name: 'ready',
@@ -35,6 +36,11 @@ module.exports = {
       }
     }
 
+    // Start the rotation system
+    rotationSystem.scheduleNextRotation();
+    rotationSystem.startRotationCycle(client);
+
     console.log('🤖 Bot is fully operational!');
+    console.log('🔄 Channel rotation system activated!');
   },
 };
