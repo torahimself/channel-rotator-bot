@@ -17,7 +17,7 @@ class PanelManager {
       const panelChannel = await this.client.channels.fetch(config.voice.controlPanelChannelId);
       if (!panelChannel) return null;
 
-      const panelImageURL = 'https://your-image-host.com/voice-control-panel.png';
+      const panelImageURL = 'https://i.imgur.com/6UtqWSH.png';
 
       const embed = {
         title: `🎛️ • لوحة تحكم غرف الصوت`,
