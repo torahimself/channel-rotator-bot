@@ -80,7 +80,7 @@ class PanelManager {
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_transfer_main')
-          .setEmoji('1438034801746509925') // REPLACE: Transfer emoji ID
+          .setEmoji('1438034809304645693') // REPLACE: Transfer emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_delete_main')
