@@ -86,12 +86,12 @@ async function rotateChannel(client) {
 
     console.log(`📋 Creating new channel: ${config.rotation.targetChannelName}`);
 
-    // Create channel first without position
+    // Create channel with the custom topic
     const newChannel = await guild.channels.create({
       name: config.rotation.targetChannelName,
       type: templateChannel.type,
       parent: config.rotation.categoryId,
-      topic: templateChannel.topic,
+      topic: "شات مخصص للرول بلاي - يرجى مراجعة القوانين", // UPDATED: Custom topic
       nsfw: templateChannel.nsfw,
       permissionOverwrites: templateChannel.permissionOverwrites.cache,
       rateLimitPerUser: templateChannel.rateLimitPerUser,
