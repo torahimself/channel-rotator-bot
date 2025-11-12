@@ -17,8 +17,7 @@ class PanelManager {
       const panelChannel = await this.client.channels.fetch(config.voice.controlPanelChannelId);
       if (!panelChannel) return null;
 
-      // REPLACE THIS URL WITH YOUR ACTUAL IMAGE URL
-      const panelImageURL = 'https://i.imgur.com/6UtqWSH.png';
+      const panelImageURL = 'https://your-image-host.com/voice-control-panel.png';
 
       const embed = {
         title: `🎛️ • لوحة تحكم غرف الصوت`,
@@ -29,69 +28,69 @@ class PanelManager {
         footer: { text: 'لوحة التحكم المركزية - جميع المستخدمين' }
       };
 
-      // Row 1: Basic Settings (All Grey)
+      // Row 1: Basic Settings - Custom Emojis
       const basicControls = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('voice_name_main')
-          .setLabel('✏️')
+          .setEmoji('1438035089526231073') // REPLACE: Name emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_limit_main')
-          .setLabel('👥')
+          .setEmoji('1438034919975682169') // REPLACE: Limit emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_privacy_main')
-          .setLabel('🔒')
+          .setEmoji('1438035151585021953') // REPLACE: Privacy emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_region_main')
-          .setLabel('🌍')
+          .setEmoji('1438034655373955114') // REPLACE: Region emoji ID
           .setStyle(ButtonStyle.Secondary)
       );
 
-      // Row 2: User Management - Trust/Block (All Grey)
+      // Row 2: User Management - Custom Emojis
       const userManagementTrust = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('voice_trust_main')
-          .setLabel('👤+')
+          .setEmoji('1438035064351883405') // REPLACE: Trust emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_untrust_main')
-          .setLabel('👤-')
+          .setEmoji('1438034959498477629') // REPLACE: Untrust emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_block_main')
-          .setLabel('🚫')
+          .setEmoji('1438035029090500650') // REPLACE: Block emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_unblock_main')
-          .setLabel('🔓')
+          .setEmoji('1438034996349632562') // REPLACE: Unblock emoji ID
           .setStyle(ButtonStyle.Secondary)
       );
 
-      // Row 3: User Management - Kick & Quick Actions (All Grey)
-      const userManagementKick = new ActionRowBuilder().addComponents(
+      // Row 3: Quick Actions - Custom Emojis
+      const quickActions = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('voice_kick_main')
-          .setLabel('👢')
+          .setEmoji('1438034884521365534') // REPLACE: Kick emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_claim_main')
-          .setLabel('🎯')
+          .setEmoji('1438034836030754927') // REPLACE: Claim emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_transfer_main')
-          .setLabel('🔄')
+          .setEmoji('1438034801746509925') // REPLACE: Transfer emoji ID
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('voice_delete_main')
-          .setLabel('🗑️')
+          .setEmoji('1438034752971214898') // REPLACE: Delete emoji ID
           .setStyle(ButtonStyle.Secondary)
       );
 
       const message = await panelChannel.send({
         embeds: [embed],
-        components: [basicControls, userManagementTrust, userManagementKick]
+        components: [basicControls, userManagementTrust, quickActions]
       });
 
       this.mainPanelMessageId = message.id;
@@ -109,29 +108,29 @@ class PanelManager {
 
       const embed = {
         title: `🎛️ • لوحة تحكم غرفتك الصوتية`,
-        description: `**الغرفة:** ${channel.name}\n**المالك:** <@${ownerId}>\n\n✏️ الاسم | 👥 العدد | 🔒 الخصوصية | 🗑️ حذف`,
+        description: `**الغرفة:** ${channel.name}\n**المالك:** <@${ownerId}>`,
         color: 0x00ff00,
         timestamp: new Date().toISOString(),
         footer: { text: 'لوحة التحكم الخاصة بالغرفة' }
       };
 
-      // Compact channel panel with icons only (All Grey)
+      // Channel panel - Custom Emojis
       const controls = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`voice_name_${channelId}`)
-          .setLabel('✏️')
+          .setEmoji('123456789012345671') // REPLACE: Name emoji ID (same as above)
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`voice_limit_${channelId}`)
-          .setLabel('👥')
+          .setEmoji('123456789012345672') // REPLACE: Limit emoji ID (same as above)
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`voice_privacy_${channelId}`)
-          .setLabel('🔒')
+          .setEmoji('123456789012345673') // REPLACE: Privacy emoji ID (same as above)
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId(`voice_delete_${channelId}`)
-          .setLabel('🗑️')
+          .setEmoji('123456789012345682') // REPLACE: Delete emoji ID (same as above)
           .setStyle(ButtonStyle.Secondary)
       );
 
@@ -243,17 +242,8 @@ class PanelManager {
       'transfer': 'نقل الملكية'
     };
 
-    const actionIcons = {
-      'trust': '👤+',
-      'untrust': '👤-', 
-      'kick': '👢',
-      'block': '🚫',
-      'unblock': '🔓',
-      'transfer': '🔄'
-    };
-
     return {
-      title: `${actionIcons[action]} ${actionLabels[action]}`,
+      title: `${actionLabels[action]}`,
       custom_id: `modal_${action}_${channelId}`,
       components: [{
         type: 1,
