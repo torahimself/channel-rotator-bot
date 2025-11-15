@@ -66,7 +66,7 @@ async function rotateChannel(client) {
       (ch) => ch.parentId === config.rotation.categoryId
     );
 
-    // Find the highest position among the specified channels
+    // Find the highest position among the specified channels (now only 2 channels)
     for (const channelId of config.rotation.positionChannels) {
       const channel = categoryChannels.get(channelId);
       if (channel) {
