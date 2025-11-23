@@ -8,7 +8,6 @@ function loadCommands() {
   try {
     const commandsPath = path.join(__dirname, '../commands');
     
-    // Check if commands directory exists
     if (!fs.existsSync(commandsPath)) {
       console.log('⚠️  Commands directory not found, creating...');
       fs.mkdirSync(commandsPath, { recursive: true });
@@ -34,7 +33,7 @@ function loadCommands() {
               ...command,
               category: category
             });
-            console.log(`✅ Loaded command: ${command.data.name}`);
+            console.log(`✅ Loaded command: ${command.data.name} (${category})`);
           }
         } catch (error) {
           console.error(`❌ Error loading command ${file}:`, error.message);
@@ -46,6 +45,15 @@ function loadCommands() {
   } catch (error) {
     console.error('❌ Error loading commands:', error);
   }
+}
+
+// Public API for other modules to add commands
+function registerCommand(commandName, commandData) {
+  if (commands.has(commandName)) {
+    console.log(`⚠️  Command ${commandName} already exists, overwriting...`);
+  }
+  commands.set(commandName, commandData);
+  console.log(`✅ Registered external command: ${commandName}`);
 }
 
 function getCommands() {
@@ -74,6 +82,7 @@ module.exports = {
   loadCommands,
   getCommands,
   executeCommand,
+  registerCommand, // NEW: For external modules
   commands,
   commandCategories
 };
