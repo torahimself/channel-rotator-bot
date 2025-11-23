@@ -1,11 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
+const events = new Map();
+
 function loadEvents(client) {
   try {
     const eventsPath = path.join(__dirname, '../events');
     
-    // Check if events directory exists
     if (!fs.existsSync(eventsPath)) {
       console.log('⚠️  Events directory not found, creating...');
       fs.mkdirSync(eventsPath, { recursive: true });
@@ -25,6 +26,7 @@ function loadEvents(client) {
           client.on(event.name, (...args) => event.execute(...args));
         }
         
+        events.set(event.name, event);
         console.log(`✅ Loaded event: ${event.name}`);
       } catch (error) {
         console.error(`❌ Error loading event ${file}:`, error.message);
@@ -37,4 +39,23 @@ function loadEvents(client) {
   }
 }
 
-module.exports = { loadEvents };
+// Public API for other modules to add events
+function registerEvent(eventName, eventData, client) {
+  if (events.has(eventName)) {
+    console.log(`⚠️  Event ${eventName} already exists, overwriting...`);
+  }
+  
+  if (eventData.once) {
+    client.once(eventName, (...args) => eventData.execute(...args));
+  } else {
+    client.on(eventName, (...args) => eventData.execute(...args));
+  }
+  
+  events.set(eventName, eventData);
+  console.log(`✅ Registered external event: ${eventName}`);
+}
+
+module.exports = { 
+  loadEvents,
+  registerEvent // NEW: For external modules
+};
