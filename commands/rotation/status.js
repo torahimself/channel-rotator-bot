@@ -8,62 +8,92 @@ module.exports = {
     .setDescription('Check channel rotation status and bot information'),
   
   async execute(interaction) {
-    const guild = interaction.client.guilds.cache.get(config.rotation.serverId);
-    const currentChannel = guild.channels.cache.find(
-      (ch) => ch.name === config.rotation.targetChannelName
-    );
+    try {
+      console.log('🔧 Status command executed');
+      
+      // Defer the reply to avoid interaction timeout
+      await interaction.deferReply();
+      
+      const guild = interaction.client.guilds.cache.get(config.rotation.serverId);
+      if (!guild) {
+        console.log('❌ Guild not found');
+        return await interaction.editReply('❌ Server not found!');
+      }
 
-    const rotationCount = rotationSystem.getRotationCount();
-    const nextRotationTime = rotationSystem.getNextRotationTime();
-    const lastRotationTime = rotationSystem.getLastRotationTime();
-    const uptime = process.uptime();
-    
-    const statusEmbed = {
-      title: "🤖 Automated Channel Management Status",
-      fields: [
-        { name: "Bot Status", value: "Operational ✅", inline: true },
-        { name: "Uptime", value: formatUptime(uptime), inline: true },
-        { name: "Rotation Count", value: rotationCount.toString(), inline: true },
-        { name: "Channel Name", value: config.rotation.targetChannelName, inline: true },
-        { name: "Channel Type", value: "text", inline: true },
-        { name: "Channel Status", value: currentChannel ? "Active ✅" : "Missing ❌", inline: true },
-        {
-          name: "Next Rotation",
-          value: nextRotationTime
-            ? `<t:${Math.floor(nextRotationTime.getTime() / 1000)}:F> (<t:${Math.floor(nextRotationTime.getTime() / 1000)}:R>)`
-            : "Not scheduled",
-          inline: false,
-        },
-        {
-          name: "Last Rotation",
-          value: lastRotationTime
-            ? `<t:${Math.floor(lastRotationTime.getTime() / 1000)}:R>`
-            : "Never",
-          inline: true,
-        },
-        { name: "Category", value: `<#${config.rotation.categoryId}>`, inline: true },
-        {
-          name: "Template",
-          value: `<#${config.rotation.templateChannelId}>`,
-          inline: true,
-        },
-        {
-          name: "Current Position",
-          value: currentChannel ? `Position ${currentChannel.position}` : "N/A",
-          inline: true,
-        },
-        {
-          name: "Bot Health",
-          value: `Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB\nPing: ${interaction.client.ws.ping}ms`,
-          inline: true,
-        },
-      ],
-      color: 0x00ff00,
-      timestamp: new Date().toISOString(),
-      footer: { text: `Bot ID: ${interaction.client.user.id}` }
-    };
+      const currentChannel = guild.channels.cache.find(
+        (ch) => ch.name === config.rotation.targetChannelName
+      );
 
-    await interaction.reply({ embeds: [statusEmbed] });
+      const rotationCount = rotationSystem.getRotationCount();
+      const nextRotationTime = rotationSystem.getNextRotationTime();
+      const lastRotationTime = rotationSystem.getLastRotationTime();
+      const uptime = process.uptime();
+      
+      console.log('📊 Building status embed...');
+      
+      const statusEmbed = {
+        title: "🤖 Automated Channel Management Status",
+        fields: [
+          { name: "Bot Status", value: "Operational ✅", inline: true },
+          { name: "Uptime", value: formatUptime(uptime), inline: true },
+          { name: "Rotation Count", value: rotationCount.toString(), inline: true },
+          { name: "Channel Name", value: config.rotation.targetChannelName, inline: true },
+          { name: "Channel Type", value: "text", inline: true },
+          { name: "Channel Status", value: currentChannel ? "Active ✅" : "Missing ❌", inline: true },
+          {
+            name: "Next Rotation",
+            value: nextRotationTime
+              ? `<t:${Math.floor(nextRotationTime.getTime() / 1000)}:F> (<t:${Math.floor(nextRotationTime.getTime() / 1000)}:R>)`
+              : "Not scheduled",
+            inline: false,
+          },
+          {
+            name: "Last Rotation",
+            value: lastRotationTime
+              ? `<t:${Math.floor(lastRotationTime.getTime() / 1000)}:R>`
+              : "Never",
+            inline: true,
+          },
+          { name: "Category", value: `<#${config.rotation.categoryId}>`, inline: true },
+          {
+            name: "Template",
+            value: `<#${config.rotation.templateChannelId}>`,
+            inline: true,
+          },
+          {
+            name: "Current Position",
+            value: currentChannel ? `Position ${currentChannel.position}` : "N/A",
+            inline: true,
+          },
+          {
+            name: "Bot Health",
+            value: `Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB\nPing: ${interaction.client.ws.ping}ms`,
+            inline: true,
+          },
+        ],
+        color: 0x00ff00,
+        timestamp: new Date().toISOString(),
+        footer: { text: `Bot ID: ${interaction.client.user.id}` }
+      };
+
+      console.log('✅ Sending status embed...');
+      await interaction.editReply({ embeds: [statusEmbed] });
+      console.log('✅ Status command completed successfully');
+      
+    } catch (error) {
+      console.error('❌ Error in status command:', error);
+      
+      const errorMessage = '❌ There was an error executing the status command!';
+      
+      if (interaction.replied || interaction.deferred) {
+        await interaction.editReply(errorMessage);
+      } else {
+        await interaction.reply({ 
+          content: errorMessage, 
+          ephemeral: true 
+        });
+      }
+    }
   },
 };
 
@@ -82,6 +112,3 @@ function formatUptime(seconds) {
   
   return parts.join(' ');
 }
-
-// No more circular exports - all functions are now in rotationSystem
-module.exports.data = module.exports.data;
