@@ -2,20 +2,6 @@ const { SlashCommandBuilder } = require('discord.js');
 const config = require('../../config.js');
 const rotationSystem = require('../../utils/rotationSystem');
 
-// Calculate 6 AM Riyadh time (3 AM UTC)
-function getNextRotationTime() {
-  const now = new Date();
-  const next = new Date();
-  next.setUTCHours(3, 0, 0, 0);
-  if (now.getTime() > next.getTime()) {
-    next.setUTCDate(next.getUTCDate() + 1);
-  }
-  return next;
-}
-
-let nextRotationTime = getNextRotationTime();
-let lastRotationTime = null;
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('status')
@@ -28,6 +14,8 @@ module.exports = {
     );
 
     const rotationCount = rotationSystem.getRotationCount();
+    const nextRotationTime = rotationSystem.getNextRotationTime();
+    const lastRotationTime = rotationSystem.getLastRotationTime();
     const uptime = process.uptime();
     
     const statusEmbed = {
@@ -95,8 +83,5 @@ function formatUptime(seconds) {
   return parts.join(' ');
 }
 
-// Export these for rotation system
-module.exports.getNextRotationTime = getNextRotationTime;
-module.exports.setNextRotationTime = (time) => { nextRotationTime = time; };
-module.exports.setLastRotationTime = (time) => { lastRotationTime = time; };
-module.exports.getLastRotationTime = () => lastRotationTime;
+// No more circular exports - all functions are now in rotationSystem
+module.exports.data = module.exports.data;
