@@ -6,7 +6,7 @@ let nextRotationTime = null;
 let lastRotationTime = null;
 
 // Calculate 6 AM Riyadh time (3 AM UTC)
-function getNextRotationTime() {
+function calculateNextRotationTime() {
   const now = new Date();
   const next = new Date();
   next.setUTCHours(3, 0, 0, 0);
@@ -17,7 +17,7 @@ function getNextRotationTime() {
 }
 
 function scheduleNextRotation() {
-  nextRotationTime = getNextRotationTime();
+  nextRotationTime = calculateNextRotationTime();
   
   const now = new Date();
   const timeUntilRotation = nextRotationTime.getTime() - now.getTime();
@@ -28,7 +28,7 @@ function scheduleNextRotation() {
 
 function startRotationCycle(client) {
   const now = new Date();
-  nextRotationTime = getNextRotationTime();
+  nextRotationTime = calculateNextRotationTime();
   const timeUntilRotation = nextRotationTime.getTime() - now.getTime();
 
   console.log(`⏰ First rotation in: ${Math.round(timeUntilRotation / (1000 * 60 * 60))} hours`);
@@ -141,7 +141,10 @@ async function rotateChannel(client) {
 
 // Public API for status endpoint and commands
 function getNextRotationTime() {
-  return nextRotationTime || getNextRotationTime();
+  if (!nextRotationTime) {
+    nextRotationTime = calculateNextRotationTime();
+  }
+  return nextRotationTime;
 }
 
 function getLastRotationTime() {
