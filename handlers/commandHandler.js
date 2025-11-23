@@ -28,12 +28,12 @@ function loadCommands() {
           const commandPath = path.join(categoryPath, file);
           const command = require(commandPath);
           
-          if (command.data && command.execute) {
-            commands.set(command.data.name, {
-              ...command,
-              category: category
-            });
+          // FIX: Check if command has data property properly
+          if (command.data && typeof command.data.name === 'string') {
+            commands.set(command.data.name, command);
             console.log(`✅ Loaded command: ${command.data.name} (${category})`);
+          } else {
+            console.log(`❌ Invalid command structure in ${file}: missing data or data.name`);
           }
         } catch (error) {
           console.error(`❌ Error loading command ${file}:`, error.message);
@@ -47,22 +47,17 @@ function loadCommands() {
   }
 }
 
-// Public API for other modules to add commands
-function registerCommand(commandName, commandData) {
-  if (commands.has(commandName)) {
-    console.log(`⚠️  Command ${commandName} already exists, overwriting...`);
-  }
-  commands.set(commandName, commandData);
-  console.log(`✅ Registered external command: ${commandName}`);
-}
-
 function getCommands() {
-  return Array.from(commands.values()).map(cmd => cmd.data);
+  // FIX: Return the actual command data objects, not just the data property
+  return Array.from(commands.values()).map(cmd => cmd.data.toJSON ? cmd.data.toJSON() : cmd.data);
 }
 
 function executeCommand(interaction) {
   const command = commands.get(interaction.commandName);
-  if (!command) return false;
+  if (!command) {
+    console.log(`❌ Command not found: ${interaction.commandName}`);
+    return false;
+  }
 
   try {
     command.execute(interaction);
@@ -82,7 +77,6 @@ module.exports = {
   loadCommands,
   getCommands,
   executeCommand,
-  registerCommand, // NEW: For external modules
   commands,
   commandCategories
 };
