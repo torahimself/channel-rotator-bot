@@ -2,18 +2,12 @@ const { REST, Routes } = require('discord.js');
 const config = require('../config.js');
 const commandHandler = require('../handlers/commandHandler');
 const rotationSystem = require('../utils/rotationSystem');
-const voiceManager = require('../utils/voiceManager');
-const panelManager = require('../utils/panelManager');
 
 module.exports = {
   name: 'ready',
   once: true,
   async execute(client) {
     console.log(`✅ Bot logged in as ${client.user.tag}!`);
-
-    // Set client for voice and panel managers
-    voiceManager.setClient(client);
-    panelManager.setClient(client);
 
     // Register slash commands
     try {
@@ -40,20 +34,14 @@ module.exports = {
       }
     }
 
-    // Create the main voice control panel
-    try {
-      await panelManager.createMainPanel();
-      console.log('✅ Main voice control panel created!');
-    } catch (error) {
-      console.log('❌ Could not create main panel:', error.message);
-    }
-
     // Start the rotation system
     rotationSystem.scheduleNextRotation();
     rotationSystem.startRotationCycle(client);
 
     console.log('🤖 Bot is fully operational!');
     console.log('🔄 Channel rotation system activated!');
-    console.log('🎤 Temp voice system activated!');
+    
+    // Emit event for external modules
+    client.emit('botReady', client);
   },
 };
