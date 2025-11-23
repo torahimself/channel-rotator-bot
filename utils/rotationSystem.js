@@ -1,24 +1,35 @@
 const config = require('../config.js');
-const statusCommand = require('../commands/rotation/status');
 
 let rotationInterval;
 let rotationCount = 0;
+let nextRotationTime = null;
+let lastRotationTime = null;
+
+// Calculate 6 AM Riyadh time (3 AM UTC)
+function getNextRotationTime() {
+  const now = new Date();
+  const next = new Date();
+  next.setUTCHours(3, 0, 0, 0);
+  if (now.getTime() > next.getTime()) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+  return next;
+}
 
 function scheduleNextRotation() {
-  const nextRotation = statusCommand.getNextRotationTime();
-  statusCommand.setNextRotationTime(nextRotation);
+  nextRotationTime = getNextRotationTime();
   
   const now = new Date();
-  const timeUntilRotation = nextRotation.getTime() - now.getTime();
+  const timeUntilRotation = nextRotationTime.getTime() - now.getTime();
   const hoursUntil = Math.round(timeUntilRotation / (1000 * 60 * 60));
   
-  console.log(`⏰ Next rotation in ${hoursUntil}h at: ${nextRotation.toUTCString()} (6 AM Riyadh)`);
+  console.log(`⏰ Next rotation in ${hoursUntil}h at: ${nextRotationTime.toUTCString()} (6 AM Riyadh)`);
 }
 
 function startRotationCycle(client) {
   const now = new Date();
-  const nextRotation = statusCommand.getNextRotationTime();
-  const timeUntilRotation = nextRotation.getTime() - now.getTime();
+  nextRotationTime = getNextRotationTime();
+  const timeUntilRotation = nextRotationTime.getTime() - now.getTime();
 
   console.log(`⏰ First rotation in: ${Math.round(timeUntilRotation / (1000 * 60 * 60))} hours`);
 
@@ -119,7 +130,7 @@ async function rotateChannel(client) {
     );
 
     // Update rotation times
-    statusCommand.setLastRotationTime(new Date());
+    lastRotationTime = new Date();
     scheduleNextRotation();
     
     console.log(`🎯 Daily rotation #${rotationCount} completed successfully! Final channel position: ${newChannel.position}`);
@@ -128,17 +139,21 @@ async function rotateChannel(client) {
   }
 }
 
-// Public API for status endpoint
+// Public API for status endpoint and commands
 function getNextRotationTime() {
-  return statusCommand.getNextRotationTime();
+  return nextRotationTime || getNextRotationTime();
 }
 
 function getLastRotationTime() {
-  return statusCommand.getLastRotationTime();
+  return lastRotationTime;
 }
 
 function getRotationCount() {
   return rotationCount;
+}
+
+function setLastRotationTime(time) {
+  lastRotationTime = time;
 }
 
 module.exports = {
@@ -147,5 +162,6 @@ module.exports = {
   rotateChannel,
   getNextRotationTime,
   getLastRotationTime,
-  getRotationCount
+  getRotationCount,
+  setLastRotationTime
 };
