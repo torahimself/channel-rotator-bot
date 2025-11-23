@@ -1,10 +1,11 @@
 {
   "name": "channel-rotator-bot",
   "version": "1.0.0",
-  "description": "Advanced Discord bot with multiple features",
+  "description": "Modular Discord bot with channel rotation system",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
@@ -15,7 +16,7 @@
     "bot",
     "channel",
     "rotation",
-    "voice"
+    "modular"
   ],
   "author": "Your Name",
   "license": "MIT"
