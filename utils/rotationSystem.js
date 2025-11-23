@@ -2,12 +2,17 @@ const config = require('../config.js');
 const statusCommand = require('../commands/rotation/status');
 
 let rotationInterval;
+let rotationCount = 0;
 
 function scheduleNextRotation() {
   const nextRotation = statusCommand.getNextRotationTime();
   statusCommand.setNextRotationTime(nextRotation);
   
-  console.log(`⏰ Next rotation scheduled at: ${nextRotation.toUTCString()} (6 AM Riyadh)`);
+  const now = new Date();
+  const timeUntilRotation = nextRotation.getTime() - now.getTime();
+  const hoursUntil = Math.round(timeUntilRotation / (1000 * 60 * 60));
+  
+  console.log(`⏰ Next rotation in ${hoursUntil}h at: ${nextRotation.toUTCString()} (6 AM Riyadh)`);
 }
 
 function startRotationCycle(client) {
@@ -31,7 +36,8 @@ function startRotationCycle(client) {
 
 async function rotateChannel(client) {
   try {
-    console.log("🔄 Starting daily channel rotation...");
+    rotationCount++;
+    console.log(`🔄 Starting daily channel rotation #${rotationCount}...`);
 
     const guild = client.guilds.cache.get(config.rotation.serverId);
     if (!guild) {
@@ -66,7 +72,7 @@ async function rotateChannel(client) {
       (ch) => ch.parentId === config.rotation.categoryId
     );
 
-    // Find the highest position among the specified channels (now only 2 channels)
+    // Find the highest position among the specified channels
     for (const channelId of config.rotation.positionChannels) {
       const channel = categoryChannels.get(channelId);
       if (channel) {
@@ -83,7 +89,6 @@ async function rotateChannel(client) {
     targetPosition = highestPosition + 1;
 
     console.log(`🎯 Target position: ${targetPosition} (after position ${highestPosition})`);
-
     console.log(`📋 Creating new channel: ${config.rotation.targetChannelName}`);
 
     // Create channel with the custom topic
@@ -91,7 +96,7 @@ async function rotateChannel(client) {
       name: config.rotation.targetChannelName,
       type: templateChannel.type,
       parent: config.rotation.categoryId,
-      topic: "شات مخصص للرول بلاي - يرجى مراجعة القوانين", // UPDATED: Custom topic
+      topic: "شات مخصص للرول بلاي - يرجى مراجعة القوانين",
       nsfw: templateChannel.nsfw,
       permissionOverwrites: templateChannel.permissionOverwrites.cache,
       rateLimitPerUser: templateChannel.rateLimitPerUser,
@@ -110,21 +115,37 @@ async function rotateChannel(client) {
     }
 
     await newChannel.send(
-      `🔄 **Channel Auto-Rotated**\n• Created: <t:${Math.floor(Date.now() / 1000)}:F>\n• Next rotation: <t:${Math.floor((Date.now() + config.rotation.rotationInterval) / 1000)}:F>\n• Position: Below specified channels`
+      `🔄 **Channel Auto-Rotated**\n• Rotation #${rotationCount}\n• Created: <t:${Math.floor(Date.now() / 1000)}:F>\n• Next rotation: <t:${Math.floor((Date.now() + config.rotation.rotationInterval) / 1000)}:F>\n• Position: Below specified channels`
     );
 
     // Update rotation times
     statusCommand.setLastRotationTime(new Date());
     scheduleNextRotation();
     
-    console.log(`🎯 Daily rotation completed successfully! Final channel position: ${newChannel.position}`);
+    console.log(`🎯 Daily rotation #${rotationCount} completed successfully! Final channel position: ${newChannel.position}`);
   } catch (error) {
     console.error("❌ Error during rotation:", error);
   }
 }
 
+// Public API for status endpoint
+function getNextRotationTime() {
+  return statusCommand.getNextRotationTime();
+}
+
+function getLastRotationTime() {
+  return statusCommand.getLastRotationTime();
+}
+
+function getRotationCount() {
+  return rotationCount;
+}
+
 module.exports = {
   scheduleNextRotation,
   startRotationCycle,
-  rotateChannel
+  rotateChannel,
+  getNextRotationTime,
+  getLastRotationTime,
+  getRotationCount
 };
