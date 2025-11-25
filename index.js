@@ -80,15 +80,15 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   process.exit(1);
 });
 
-// Self-pinging system to keep Render instance warm - FIXED VERSION
+// Enhanced self-pinging system to keep Render instance warm
 function startSelfPinging() {
-  console.log('🔔 Starting self-ping system to prevent spin-down...');
+  console.log('🔔 Starting enhanced self-ping system to prevent spin-down...');
   
-  // Use the built-in http module instead of fetch
   const http = require('http');
   
+  // Ping internally (for when instance is running)
   setInterval(() => {
-    const options = {
+    const internalOptions = {
       hostname: 'localhost',
       port: PORT,
       path: '/ping',
@@ -96,26 +96,48 @@ function startSelfPinging() {
       timeout: 5000
     };
     
-    const req = http.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        console.log(`✅ Self-ping successful - ${new Date().toISOString()}`);
-      });
+    const req = http.request(internalOptions, (res) => {
+      console.log(`✅ Internal ping successful - ${new Date().toISOString()}`);
     });
     
     req.on('error', (error) => {
-      console.log('❌ Self-ping failed:', error.message);
+      console.log('❌ Internal ping failed:', error.message);
     });
     
     req.on('timeout', () => {
-      console.log('⏰ Self-ping timeout');
+      console.log('⏰ Internal ping timeout');
       req.destroy();
     });
     
     req.end();
     
-  }, 10 * 60 * 1000); // Ping every 10 minutes (Render spins down after 15 mins)
+  }, 8 * 60 * 1000); // Internal ping every 8 minutes
+
+  // ALSO ping externally to wake up from complete spin-down
+  setInterval(() => {
+    const externalOptions = {
+      hostname: 'channel-rotator-bot.onrender.com',
+      path: '/ping',
+      method: 'GET',
+      timeout: 30000
+    };
+    
+    const req = http.request(externalOptions, (res) => {
+      console.log(`✅ External ping successful - ${new Date().toISOString()}`);
+    });
+    
+    req.on('error', (error) => {
+      console.log('❌ External ping failed:', error.message);
+    });
+    
+    req.on('timeout', () => {
+      console.log('⏰ External ping timeout');
+      req.destroy();
+    });
+    
+    req.end();
+    
+  }, 10 * 60 * 1000); // External ping every 10 minutes
 }
 
 // Enhanced error handling for server
