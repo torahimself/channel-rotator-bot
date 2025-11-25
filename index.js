@@ -75,22 +75,47 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`   http://0.0.0.0:${PORT}/ - Health check`);
   console.log(`   http://0.0.0.0:${PORT}/ping - Simple ping`);
   console.log(`   http://0.0.0.0:${PORT}/status - Detailed status`);
+}).on('error', (err) => {
+  console.error('❌ Failed to start server:', err);
+  process.exit(1);
 });
 
-// Self-pinging system to keep Render instance warm
+// Self-pinging system to keep Render instance warm - FIXED VERSION
 function startSelfPinging() {
   console.log('🔔 Starting self-ping system to prevent spin-down...');
   
-  setInterval(async () => {
-    try {
-      const response = await fetch(`http://localhost:${PORT}/ping`);
-      if (response.ok) {
+  // Use the built-in http module instead of fetch
+  const http = require('http');
+  
+  setInterval(() => {
+    const options = {
+      hostname: 'localhost',
+      port: PORT,
+      path: '/ping',
+      method: 'GET',
+      timeout: 5000
+    };
+    
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
         console.log(`✅ Self-ping successful - ${new Date().toISOString()}`);
-      }
-    } catch (error) {
-      console.log('⚠️  Self-ping failed (server might be starting):', error.message);
-    }
-  }, 4 * 60 * 1000); // Ping every 4 minutes (more frequent than Render's 5-minute threshold)
+      });
+    });
+    
+    req.on('error', (error) => {
+      console.log('❌ Self-ping failed:', error.message);
+    });
+    
+    req.on('timeout', () => {
+      console.log('⏰ Self-ping timeout');
+      req.destroy();
+    });
+    
+    req.end();
+    
+  }, 10 * 60 * 1000); // Ping every 10 minutes (Render spins down after 15 mins)
 }
 
 // Enhanced error handling for server
