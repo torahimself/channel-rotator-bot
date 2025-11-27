@@ -15,134 +15,23 @@ const client = new Client({
   ],
 });
 
-// Enhanced health check with more details
+// SIMPLE health check endpoint (copy from working bot)
 app.get('/', (req, res) => {
-  const uptime = process.uptime();
-  const memoryUsage = process.memoryUsage();
-  
   res.json({ 
     status: 'OK', 
     bot: client.readyAt ? 'Connected' : 'Connecting',
-    botUser: client.user?.tag || 'Not logged in',
-    guilds: client.guilds.cache.size,
-    uptime: {
-      seconds: Math.floor(uptime),
-      human: formatUptime(uptime)
-    },
-    memory: {
-      used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
-      total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`
-    },
-    timestamp: new Date().toISOString(),
-    lastHealthCheck: global.lastHealthCheck || 'Never'
+    timestamp: new Date().toISOString()
   });
 });
 
-// Simple ping endpoint for external monitoring
+// SIMPLE ping endpoint
 app.get('/ping', (req, res) => {
-  global.lastHealthCheck = new Date().toISOString();
-  res.json({ status: 'pong', timestamp: global.lastHealthCheck });
-});
-
-// Bot status endpoint
-app.get('/status', (req, res) => {
-  const rotationSystem = require('./utils/rotationSystem');
-  
-  res.json({
-    bot: {
-      status: client.readyAt ? 'ready' : 'starting',
-      user: client.user?.tag,
-      guilds: client.guilds.cache.size,
-      readyAt: client.readyAt
-    },
-    rotation: {
-      nextRotation: rotationSystem.getNextRotationTime(),
-      lastRotation: rotationSystem.getLastRotationTime(),
-      isActive: true
-    },
-    system: {
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      nodeVersion: process.version
-    }
-  });
+  res.json({ status: 'pong', timestamp: new Date().toISOString() });
 });
 
 // Start web server
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Health check server running on port ${PORT}`);
-  console.log(`🌐 Endpoints available:`);
-  console.log(`   http://0.0.0.0:${PORT}/ - Health check`);
-  console.log(`   http://0.0.0.0:${PORT}/ping - Simple ping`);
-  console.log(`   http://0.0.0.0:${PORT}/status - Detailed status`);
-}).on('error', (err) => {
-  console.error('❌ Failed to start server:', err);
-  process.exit(1);
-});
-
-// Enhanced self-pinging system to keep Render instance warm
-function startSelfPinging() {
-  console.log('🔔 Starting enhanced self-ping system to prevent spin-down...');
-  
-  const http = require('http');
-  
-  // Ping internally (for when instance is running)
-  setInterval(() => {
-    const internalOptions = {
-      hostname: 'localhost',
-      port: PORT,
-      path: '/ping',
-      method: 'GET',
-      timeout: 5000
-    };
-    
-    const req = http.request(internalOptions, (res) => {
-      console.log(`✅ Internal ping successful - ${new Date().toISOString()}`);
-    });
-    
-    req.on('error', (error) => {
-      console.log('❌ Internal ping failed:', error.message);
-    });
-    
-    req.on('timeout', () => {
-      console.log('⏰ Internal ping timeout');
-      req.destroy();
-    });
-    
-    req.end();
-    
-  }, 8 * 60 * 1000); // Internal ping every 8 minutes
-
-  // ALSO ping externally to wake up from complete spin-down
-  setInterval(() => {
-    const externalOptions = {
-      hostname: 'channel-rotator-bot.onrender.com',
-      path: '/ping',
-      method: 'GET',
-      timeout: 30000
-    };
-    
-    const req = http.request(externalOptions, (res) => {
-      console.log(`✅ External ping successful - ${new Date().toISOString()}`);
-    });
-    
-    req.on('error', (error) => {
-      console.log('❌ External ping failed:', error.message);
-    });
-    
-    req.on('timeout', () => {
-      console.log('⏰ External ping timeout');
-      req.destroy();
-    });
-    
-    req.end();
-    
-  }, 10 * 60 * 1000); // External ping every 10 minutes
-}
-
-// Enhanced error handling for server
-server.on('error', (error) => {
-  console.error('❌ Server error:', error);
 });
 
 // Load handlers
@@ -156,15 +45,13 @@ eventHandler.loadEvents(client);
 client.login(config.botToken)
   .then(() => {
     console.log('🔑 Discord login successful');
-    // Start self-pinging after bot is ready
-    setTimeout(startSelfPinging, 5000);
   })
   .catch(error => {
     console.error('❌ Discord login failed:', error);
     process.exit(1);
   });
 
-// Enhanced error handling
+// Error handling
 client.on('error', (error) => {
   console.error('🔴 Discord client error:', error);
 });
@@ -197,27 +84,4 @@ process.on('SIGINT', () => {
   });
 });
 
-// Helper function to format uptime
-function formatUptime(seconds) {
-  const days = Math.floor(seconds / (24 * 60 * 60));
-  const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
-  const minutes = Math.floor((seconds % (60 * 60)) / 60);
-  const secs = Math.floor(seconds % 60);
-  
-  const parts = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
-  
-  return parts.join(' ');
-}
-
-// Modular export for easy extension
-module.exports = {
-  client,
-  config,
-  commandHandler,
-  eventHandler,
-  server
-};
+module.exports = { client, server };
