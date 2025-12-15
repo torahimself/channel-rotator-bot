@@ -7,7 +7,7 @@ module.exports = {
     serverId: "1357219315820269578",
     templateChannelId: "1357388121704239134",
     categoryId: "1357382666378280970",
-    targetChannelName: "👠．ᴄʜᴀᴛ・الفساد",
+    targetChannelName: "👠．شات・الفساد",
     positionChannels: [
       "1418663574493991144",
       "1357384022388379891"
